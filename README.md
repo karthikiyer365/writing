@@ -42,5 +42,18 @@ Components available inside MDX: `<Callout kind="note|warn|good">` and
 
 Push to `main`. The Pages workflow builds and publishes.
 
-DNS is a CNAME at Squarespace: `writing` -> `karthikiyer365.github.io`.
-`public/CNAME` pins the custom domain on the Pages side.
+## Hosting
+
+Squarespace is the registrar only. DNS for `karthikiyer.info` is delegated to
+Netlify (`dns1-4.p08.nsone.net`), which also hosts the portfolio app at the
+apex — so the subdomain record is added in the **Netlify** dashboard, not
+Squarespace.
+
+    Netlify DNS
+      A      @        -> Netlify host (portfolio, Next.js + API routes)
+      CNAME  www      -> same
+      CNAME  writing  -> karthikiyer365.github.io   (this site)
+
+`public/CNAME` pins the custom domain on the Pages side; the record above is
+what points the name at Pages in the first place. Add the DNS record before
+setting the custom domain on the repo, or GitHub's verification fails.

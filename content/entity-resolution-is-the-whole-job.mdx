@@ -1,0 +1,71 @@
+---
+title: Entity resolution is the whole job
+standfirst: Five football data providers, none of them agreeing on what a player is called. Everything downstream — valuation, scouting, the dashboards — waits on one identity that holds.
+date: 2026-09-18
+category: data-engineering
+readTime: 9
+featured: true
+---
+
+Open football data is plentiful and mutually incompatible. FBref has the match statistics. Transfermarkt has the market values. football-data.co.uk has the results, ClubElo has the strength ratings, and not one of them agrees on how to spell a name.
+
+So any question that spans two providers — is this player producing more than he costs, has this club actually been getting stronger — is really an entity-resolution problem wearing an analytics costume. You do not get to the interesting part until the boring part is finished.
+
+<StatStrip stats={[
+  { value: "5", label: "providers unified" },
+  { value: "49,692", label: "player-seasons" },
+  { value: "18", label: "seasons covered" },
+  { value: "1", label: "identity per player", accent: true }
+]} />
+
+## The four-rung ladder
+
+Matching runs in strict order and stops at the first rung that binds: manual overrides, then a stored mapping file, then exact match, then fuzzy. Each rung is cheaper to trust than the one below it, so the ladder is also a confidence ordering.
+
+Every rung is guarded by birth year.
+
+```python
+# every rung guarded by birth year
+for rung in (overrides, mapping, exact, fuzzy):
+    hit = rung(name, team)
+    if hit and hit.birth_year == src.birth_year:
+        return hit
+return None  # unresolved beats wrong
+```
+
+That last line is the one that matters.
+
+> A fuzzy name match without a birth-year guard will bind the wrong player silently — and you will not find out for months.
+
+An unresolved player is a gap. It shows up as a hole in a table, someone notices, and it gets fixed. A wrongly resolved player is a number that looks entirely reasonable on a dashboard forever, quietly averaging two careers together.
+
+<Callout kind="warn">
+Fuzzy matching on common names is where this breaks worst. Two players sharing a surname, a league and an age bracket will match each other at a similarity score you would otherwise consider safe.
+</Callout>
+
+## Why blocking matters more than the algorithm
+
+The fuzzy pass is quadratic if you let it be. With tens of thousands of names on each side, comparing everything to everything is the difference between a pipeline that finishes and one you kill after an hour.
+
+Token blocking fixes it: only compare names that share a rare token. It is a crude filter and it is enough.
+
+| Approach | Comparisons | Runtime |
+| --- | --- | --- |
+| All pairs | ~2.4B | hours |
+| Token blocking | ~1.1M | under a minute |
+
+The lesson I keep relearning is that the matching function is rarely the bottleneck or the source of errors. The candidate set is both.
+
+## What it buys downstream
+
+Once identity holds, the rest of the platform gets simple in a way that feels almost unearned. Percentile scoring is a `groupby`. Valuation verdicts are one subtraction. The dashboards stopped needing clever logic because the hard thinking had already happened upstream.
+
+<Callout kind="good">
+Do the resolution once, on a schedule, and write the result to the warehouse. Every consumer downstream — dashboards, an MCP server, a notebook — then reads the same resolved identity instead of each re-deriving it slightly differently.
+</Callout>
+
+## What still breaks
+
+Club names, for one. They still differ across sources behind an interim alias map that I maintain by hand, and every new season adds a few. It is the same problem as players, one level up, and I have not given it the same rigour.
+
+Upserts also cannot delete. Change a primary key and the old rows stay behind as orphans until someone sweeps them manually. I know about it, it is written down, and it is not fixed — which is the honest state of most data platforms most of the time.

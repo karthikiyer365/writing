@@ -1,0 +1,94 @@
+/* =========================================================================
+   Light tokens. Derived from the portfolio's dark palette (app/globals.css
+   in Karthik-Iyer-Portfolio), inverted to a white ground.
+
+   Pink carries over unchanged — 4.84:1 on white. Teal, blue and green are
+   darkened for text use; their dark-theme originals sit at 2.0–3.0:1 on
+   white and are kept only as fills and chart marks.
+   ========================================================================= */
+:root {
+  --bg: #ffffff;
+  --surface-1: #fafafa;
+  --surface-2: #f4f4f4;
+
+  --line-subtle: #ebebeb;
+  --line: #e0e0e0;
+
+  --ink: #1a1a1a;
+  --ink-body: #2e2e2e;
+  --ink-secondary: #5c5c5c;
+  --ink-muted: #6b6b6b;
+  --ink-faint: #9b9b9b;
+
+  --accent-pink: #dd0077;
+  --accent-teal: #0b7c66;
+  --accent-blue: #2f6fa8;
+  --accent-green: #217a30;
+
+  /* fills / chart marks only — never text */
+  --fill-teal: #4ec9b0;
+  --fill-blue: #569cd6;
+  --fill-green: #3fb950;
+
+  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: var(--accent-teal); text-decoration: none; }
+a:hover { color: var(--accent-pink); text-decoration: underline; }
+
+.mono { font-family: var(--font-mono); }
+
+/* ---- shared chrome ---- */
+.site-header {
+  height: 58px;
+  padding: 0 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line-subtle);
+}
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.site-nav { display: flex; gap: 30px; align-items: center; }
+.site-nav a { font-size: 13px; color: var(--ink-secondary); }
+.site-nav a.active { color: var(--accent-pink); font-weight: 500; }
+
+.site-footer {
+  padding: 24px 48px;
+  border-top: 1px solid var(--line-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ink-secondary);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ---- category accents: must match post h2 colour ---- */
+.cat-data-engineering { color: var(--accent-teal); }
+.cat-sports-analytics { color: var(--accent-blue); }
+.cat-llm-ops { color: var(--accent-green); }
+
+@media (max-width: 720px) {
+  .site-header { padding: 0 20px; }
+  .site-footer { padding: 20px; }
+}

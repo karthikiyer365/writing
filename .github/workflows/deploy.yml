@@ -25,10 +25,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Pages itself is enabled on the repo; the default GITHUB_TOKEN cannot
+      # create the site (admin-only API), so enablement is not set here.
       - uses: actions/configure-pages@v5
-        with:
-          # Provision Pages on first run instead of needing it switched on by hand.
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./out

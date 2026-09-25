@@ -133,3 +133,6 @@
   .grid { grid-template-columns: 1fr; }
   .archiveRow { flex-wrap: wrap; gap: 6px 14px; }
 }
+
+/* frontmatter `hero`: contain, not cover, so text inside a graphic is never cropped */
+.shotImg { width: 100%; height: 100%; object-fit: contain; display: block; }

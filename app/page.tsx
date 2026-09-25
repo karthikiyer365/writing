@@ -19,7 +19,11 @@ export default function WritingIndex() {
       {featured && (
         <a className={styles.featured} href={`/${featured.slug}/`}>
           <div className={styles.featuredShot}>
-            <span className="mono">[ hero ]</span>
+            {featured.hero ? (
+              <img className={styles.shotImg} src={featured.hero} alt={featured.heroAlt} />
+            ) : (
+              <span className="mono">[ hero ]</span>
+            )}
           </div>
           <div className={styles.featuredBody}>
             <div className={styles.row}>
@@ -40,7 +44,11 @@ export default function WritingIndex() {
           {cards.map((p) => (
             <a key={p.slug} className={styles.card} href={`/${p.slug}/`}>
               <div className={styles.cardShot}>
-                <span className="mono">[ card ]</span>
+                {p.hero ? (
+                  <img className={styles.shotImg} src={p.hero} alt={p.heroAlt} />
+                ) : (
+                  <span className="mono">[ card ]</span>
+                )}
               </div>
               <span className={`mono ${styles.cat} cat-${p.category}`}>
                 {CATEGORY_LABELS[p.category]}

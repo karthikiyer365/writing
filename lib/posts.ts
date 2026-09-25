@@ -18,6 +18,8 @@ export interface PostMeta {
   category: Category;
   readTime: number;
   featured?: boolean;
+  hero?: string;
+  heroAlt?: string;
 }
 
 export interface Heading {
@@ -70,6 +72,8 @@ function readPost(fileName: string): Post {
     category: data.category,
     readTime: data.readTime,
     featured: data.featured ?? false,
+    hero: data.hero,
+    heroAlt: data.heroAlt ?? "",
     body: content,
     headings,
   };

@@ -72,6 +72,7 @@ export default async function PostPage({ params }: Params) {
 
         <h1 className={styles.h1}>{post.title}</h1>
         <p className={styles.standfirst}>{post.standfirst}</p>
+        {post.hero && <img className={styles.hero} src={post.hero} alt={post.heroAlt} />}
 
         <div className={styles.prose}>
           <MDXRemote

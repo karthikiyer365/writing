@@ -1,0 +1,28 @@
+name: Build check
+
+# Runs on every PR into main, and again on each new push to the PR.
+# Kept out of deploy.yml: that file's `pages` concurrency group cancels in-progress
+# runs, so a PR build there could cancel a real deploy.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # next build also runs the TypeScript check
+      - run: npm run build

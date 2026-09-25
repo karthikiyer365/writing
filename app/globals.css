@@ -25,6 +25,9 @@
   --accent-blue: #2f6fa8;
   --accent-green: #217a30;
 
+  /* pink tint — panel background behind --ink text */
+  --tint-pink: #fdf4f9;
+
   /* fills / chart marks only — never text */
   --fill-teal: #4ec9b0;
   --fill-blue: #569cd6;
@@ -85,6 +88,7 @@ a:hover { color: var(--accent-pink); text-decoration: underline; }
 
 /* ---- category accents: must match post h2 colour ---- */
 .cat-data-engineering { color: var(--accent-teal); }
+.cat-data-science { color: var(--accent-pink); }
 .cat-sports-analytics { color: var(--accent-blue); }
 .cat-llm-ops { color: var(--accent-green); }
 

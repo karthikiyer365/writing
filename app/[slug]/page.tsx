@@ -10,6 +10,7 @@ import {
 } from "@/lib/posts";
 import Callout from "@/components/Callout";
 import StatStrip from "@/components/StatStrip";
+import TocLinks from "@/components/TocLinks";
 import styles from "./post.module.css";
 
 export function generateStaticParams() {
@@ -42,15 +43,11 @@ export default async function PostPage({ params }: Params) {
         <aside className={styles.rail}>
           <div className={styles.railGroup}>
             <span className={`mono ${styles.railLabel}`}>On this page</span>
-            {post.headings.map((h, i) => (
-              <a
-                key={h.id}
-                href={`#${h.id}`}
-                className={`${styles.railLink} ${i === 0 ? styles.railLinkActive : ""}`}
-              >
-                {h.text}
-              </a>
-            ))}
+            <TocLinks
+              headings={post.headings}
+              linkClass={styles.railLink}
+              activeClass={styles.railLinkActive}
+            />
           </div>
           <div className={styles.railRule} />
           <div className={styles.railGroup}>

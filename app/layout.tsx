@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://writing.karthikiyer.info"),
   title: {
-    default: "Writing — Karthik Iyer",
+    default: "Fact vs. Feelings — Karthik Iyer",
     template: "%s — Karthik Iyer",
   },
   description:

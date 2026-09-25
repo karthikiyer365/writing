@@ -10,7 +10,7 @@ export default function WritingIndex() {
 
   return (
     <main className={styles.page}>
-      <h1 className={styles.h1}>Writing</h1>
+      <h1 className={styles.h1}>Fact vs. Feelings</h1>
       <p className={styles.lede}>
         Notes on data platforms, entity resolution, and the parts of analytics
         work that never make it into the dashboard.

@@ -4,8 +4,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://writing.karthikiyer.info"),
   title: {
-    default: "Weekend at Karthik's — Karthik Iyer",
-    template: "%s — Karthik Iyer",
+    default: "Weekday at Karthik's — Karthik Iyer",
+    template: "%s — Weekday at Karthik's",
   },
   description:
     "Notes on data platforms, entity resolution, and the parts of analytics work that never make it into the dashboard.",
@@ -37,9 +37,10 @@ export default function RootLayout({
             karthik iyer
           </a>
           <nav className="site-nav">
-            <a href="/" className="active">
+            <a href="/" className="active" aria-current="page">
               Writing
             </a>
+            <a href="https://projects.karthikiyer.info">Projects</a>
             <a href="https://karthikiyer.info">Portfolio</a>
           </nav>
         </header>

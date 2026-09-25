@@ -20,6 +20,7 @@ export interface PostMeta {
   featured?: boolean;
   hero?: string;
   heroAlt?: string;
+  project?: string;
 }
 
 export interface Heading {
@@ -74,6 +75,7 @@ function readPost(fileName: string): Post {
     featured: data.featured ?? false,
     hero: data.hero,
     heroAlt: data.heroAlt ?? "",
+    project: data.project,
     body: content,
     headings,
   };

@@ -18,6 +18,7 @@
   --ink-body: #2e2e2e;
   --ink-secondary: #5c5c5c;
   --ink-muted: #6b6b6b;
+  --ink-quiet: #767676; /* 4.5:1 on white */
   --ink-faint: #9b9b9b;
 
   --accent-pink: #dd0077;
@@ -40,6 +41,8 @@
 * { box-sizing: border-box; }
 
 html, body { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
 body {
   font-family: var(--font-sans);
@@ -74,6 +77,46 @@ a:hover { color: var(--accent-pink); text-decoration: underline; }
 .site-nav a { font-size: 13px; color: var(--ink-secondary); }
 .site-nav a.active { color: var(--accent-pink); font-weight: 500; }
 
+/* ---- header row 2: latest posts ---- */
+.latest-bar {
+  height: 42px;
+  padding: 0 48px;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  border-bottom: 1px solid var(--line-subtle);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+.latest-bar::-webkit-scrollbar { display: none; }
+.latest-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.latest-bar a {
+  font-size: 13px;
+  color: var(--ink-quiet);
+  max-width: 32ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  padding: 4px 0;
+  border-bottom: 1px solid transparent;
+}
+.latest-bar a:hover { color: var(--accent-pink); text-decoration: none; }
+.latest-bar a[aria-current="page"] {
+  color: var(--accent-pink);
+  font-weight: 500;
+  border-bottom-color: var(--accent-pink);
+}
+.latest-bar .latest-all { margin-left: auto; }
+
 .site-footer {
   padding: 24px 48px;
   border-top: 1px solid var(--line-subtle);
@@ -92,7 +135,8 @@ a:hover { color: var(--accent-pink); text-decoration: underline; }
 .cat-sports-analytics { color: var(--accent-blue); }
 .cat-llm-ops { color: var(--accent-green); }
 
-@media (max-width: 720px) {
-  .site-header { padding: 0 20px; }
-  .site-footer { padding: 20px; }
+@media (max-width: 640px) {
+  .site-header { padding: 0 16px; }
+  .latest-bar { padding: 0 16px; gap: 18px; }
+  .site-footer { padding: 18px 16px; }
 }

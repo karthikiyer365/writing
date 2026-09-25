@@ -11,6 +11,7 @@ import {
 import Callout from "@/components/Callout";
 import StatStrip from "@/components/StatStrip";
 import TocLinks from "@/components/TocLinks";
+import LatestBar from "@/components/LatestBar";
 import styles from "./post.module.css";
 
 export function generateStaticParams() {
@@ -38,59 +39,67 @@ export default async function PostPage({ params }: Params) {
   const hasToc = post.headings.length >= 3;
 
   return (
-    <main className={hasToc ? styles.withRail : styles.noRail}>
-      {hasToc && (
-        <aside className={styles.rail}>
-          <div className={styles.railGroup}>
-            <span className={`mono ${styles.railLabel}`}>On this page</span>
-            <TocLinks
-              headings={post.headings}
-              linkClass={styles.railLink}
-              activeClass={styles.railLinkActive}
+    <>
+      <LatestBar current={post.slug} />
+      <main className={hasToc ? styles.withRail : styles.noRail}>
+        {hasToc && (
+          <aside className={styles.rail}>
+            <div className={styles.railGroup}>
+              <span className={`mono ${styles.railLabel}`}>On this page</span>
+              <TocLinks
+                headings={post.headings}
+                linkClass={styles.railLink}
+                activeClass={styles.railLinkActive}
+              />
+            </div>
+            <div className={styles.railRule} />
+            <div className={styles.railGroup}>
+              <span className={`mono ${styles.railLabel}`}>Published</span>
+              <span className={styles.railValue}>{formatDate(post.date)}</span>
+              <span className={styles.railValue}>{post.readTime} min read</span>
+            </div>
+          </aside>
+        )}
+
+        <article className={styles.article}>
+          <div className={styles.kicker}>
+            <span className={`mono ${styles.cat} cat-${post.category}`}>
+              {CATEGORY_LABELS[post.category]}
+            </span>
+            {!hasToc && (
+              <span className={`mono ${styles.kickerMeta}`}>
+                {formatDate(post.date)} &middot; {post.readTime} min
+              </span>
+            )}
+          </div>
+
+          <h1 className={styles.h1}>{post.title}</h1>
+          <p className={styles.standfirst}>{post.standfirst}</p>
+          {post.hero && <img className={styles.hero} src={post.hero} alt={post.heroAlt} />}
+
+          <div className={styles.prose}>
+            <MDXRemote
+              source={post.body}
+              components={{ Callout, StatStrip }}
+              options={{
+                mdxOptions: {
+                  remarkPlugins: [remarkGfm],
+                  rehypePlugins: [rehypeSlug],
+                },
+              }}
             />
           </div>
-          <div className={styles.railRule} />
-          <div className={styles.railGroup}>
-            <span className={`mono ${styles.railLabel}`}>Published</span>
-            <span className={styles.railValue}>{formatDate(post.date)}</span>
-            <span className={styles.railValue}>{post.readTime} min read</span>
-          </div>
-        </aside>
-      )}
 
-      <article className={styles.article}>
-        <div className={styles.kicker}>
-          <span className={`mono ${styles.cat} cat-${post.category}`}>
-            {CATEGORY_LABELS[post.category]}
-          </span>
-          {!hasToc && (
-            <span className={`mono ${styles.kickerMeta}`}>
-              {formatDate(post.date)} &middot; {post.readTime} min
-            </span>
-          )}
-        </div>
-
-        <h1 className={styles.h1}>{post.title}</h1>
-        <p className={styles.standfirst}>{post.standfirst}</p>
-        {post.hero && <img className={styles.hero} src={post.hero} alt={post.heroAlt} />}
-
-        <div className={styles.prose}>
-          <MDXRemote
-            source={post.body}
-            components={{ Callout, StatStrip }}
-            options={{
-              mdxOptions: {
-                remarkPlugins: [remarkGfm],
-                rehypePlugins: [rehypeSlug],
-              },
-            }}
-          />
-        </div>
-
-        <footer className={styles.postFooter}>
-          <a href="/">&larr; All writing</a>
-        </footer>
-      </article>
-    </main>
+          <footer className={styles.postFooter}>
+            <a href="/">&larr; All writing</a>
+            {post.project && (
+              <a className={styles.projectLink} href={post.project}>
+                See the project &#8599;
+              </a>
+            )}
+          </footer>
+        </article>
+      </main>
+    </>
   );
 }

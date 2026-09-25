@@ -22,7 +22,7 @@ Add an `.mdx` file to `content/`. The filename is the URL slug.
 title: Entity resolution is the whole job
 standfirst: One sentence under the headline.
 date: 2026-09-18
-category: data-engineering   # or sports-analytics | llm-ops
+category: data-science   # or data-engineering | sports-analytics | llm-ops
 readTime: 9
 featured: true               # optional, promotes it on the index
 ---

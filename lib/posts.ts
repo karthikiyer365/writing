@@ -4,7 +4,11 @@ import matter from "gray-matter";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 
-export type Category = "data-engineering" | "sports-analytics" | "llm-ops";
+export type Category =
+  | "data-engineering"
+  | "data-science"
+  | "sports-analytics"
+  | "llm-ops";
 
 export interface PostMeta {
   slug: string;
@@ -28,6 +32,7 @@ export interface Post extends PostMeta {
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   "data-engineering": "Data engineering",
+  "data-science": "Data science",
   "sports-analytics": "Sports analytics",
   "llm-ops": "LLM ops",
 };

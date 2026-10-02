@@ -3,10 +3,14 @@ title: The model was fine. The labels weren't.
 standfirst: I set out to route support tickets by department. Twenty steps of honest evaluation later, the department labels turned out to be the problem, and the useful model predicted something else.
 date: 2026-09-24
 category: data-science
-readTime: 12
+readTime: 14
 featured: true
 hero: /posts/the-model-was-fine-the-labels-werent/hero.svg
 project: https://projects.karthikiyer.info/#tickets
+seoTitle: Why a random split overstated my ticket classifier by 33 points
+seoDescription: Reworded near-duplicate tickets inflated accuracy from 38% to 71%. How grouped cross-validation gave an honest support ticket classifier.
+ogImage: /posts/the-model-was-fine-the-labels-werent/og.png
+updated: 2026-10-02
 heroAlt: Diagram of the classification model. Ticket text goes through TF-IDF features and Logistic Regression into four types, Incident, Request, Problem and Change, with test recall of 72.9%, 98.5%, 59.7% and 96.7%. Tickets below 0.75 confidence go to a person.
 ---
 
@@ -17,13 +21,17 @@ heroAlt: Diagram of the classification model. Ticket text goes through TF-IDF fe
   { value: "46%", label: "tickets auto-routed at 96% accuracy" }
 ]} />
 
+<Callout kind="note" label="Short answer">
+A standard random split scored my support ticket classifier at 71.5%, but 77% of tickets had a reworded sibling, so the model was recognising tickets, not learning from them. Keeping each family of near-duplicates on one side of the split dropped the honest score to 38.4%. The department label was the real problem, so I switched the target to ticket type: 79.9% test accuracy, with 46% of tickets auto-routed at 96% accuracy. The data is synthetic and English-only.
+</Callout>
+
 ## The job is routing, not predicting
 
 A support ticket that lands in the wrong queue costs time twice. Someone has to notice it is wrong, and then someone else has to pick it up late. The goal was simple: read a ticket the moment it arrives and send it to the right place.
 
 The person I built this for is not a data scientist. It is an operations lead who needs two things from a model: <mark>route correctly when it can, and hand the ticket to a person when it can't.</mark> That second part shaped every decision below. A model that is right 80% of the time but can't tell you *which* 80% is not something you can put in front of customers.
 
-The data is a public Kaggle set of 28,587 synthetic support tickets, each with a subject, a body, and a department label across ten departments.
+The data is a [public Kaggle set](https://www.kaggle.com/datasets/tobiasbueck/multilingual-customer-support-tickets) of 28,587 synthetic support tickets, each with a subject, a body, and a department label across ten departments.
 
 ## Decide what good looks like first
 
@@ -39,9 +47,9 @@ Before training anything, I worked out what a model with no intelligence at all 
 
 I fixed the rules before seeing any results. Accuracy decides. Every class must be found at least some of the time. Models within one point of each other count as tied, because a one-point gap is inside the noise, and ties go to the higher macro F1. Writing this down first meant I couldn't pick a metric later to flatter whichever model I liked.
 
-## Only use what exists when the ticket arrives
+## What is data leakage, and which columns leaked here?
 
-The dataset has more than text. It also has the agent's reply, a priority, a ticket type and up to eight topic tags. <mark>All of those are added *after* someone has read and handled the ticket. A model that uses them at training time would have nothing to look at in production.</mark>
+The dataset has more than text. It also has the agent's reply, a priority, a ticket type and up to eight topic tags. <mark>All of those are added *after* someone has read and handled the ticket. A model that uses them at training time would have nothing to look at in production.</mark> Using them would be *data leakage*: information the model sees in training that won't exist when it is used.
 
 I checked how much they would have helped. Tags, type and priority together lift accuracy about 13 points above the floor. That is real signal, and I excluded it anyway. <mark>The model reads only what the customer wrote: the subject and the body.</mark>
 
@@ -53,13 +61,13 @@ Two more scoping decisions, both stated up front:
 - **The data is synthetic.** The results show the method works. They are not a promise about a real inbox.
 - **English only.** I kept the 16,338 English tickets. Every example stays readable, so I can check the model's mistakes myself. It also closes a quieter leak: a German ticket that is a translation of an English one would look unrelated to a word-based check, and could end up on both sides of the split. The cost is that German tickets can't be routed yet.
 
-## The trap in the data: reworded families
+## Why did a random split overstate accuracy by 33 points?
 
 Reading samples, I kept seeing the same ticket twice with slightly different wording. The generator had clearly taken one ticket and reworded it several times, keeping the same label.
 
 That matters because of how models are tested. <mark>The usual approach shuffles tickets and holds some back as a test.</mark> If one version of a ticket is in training and its reworded sibling is in the test, the model doesn't need to understand anything. It just recognises the ticket.
 
-To find the families, <mark>I turned every ticket into a TF-IDF vector (a list of word weights that favours words distinctive to that ticket) and measured how similar each ticket is to its closest neighbour.</mark> Tickets above a similarity threshold are linked, and every connected group becomes one family.
+To find the families, <mark>I turned every ticket into a [TF-IDF](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html) vector (a list of word weights that favours words distinctive to that ticket) and measured how similar each ticket is to its closest neighbour.</mark> Tickets above a similarity threshold are linked, and every connected group becomes one family.
 
 ```python
 # link every pair of tickets above the threshold, then each connected group is a family
@@ -72,7 +80,7 @@ The threshold was the decision that needed evidence. Too low and unrelated ticke
 ![Bar chart showing label agreement between a ticket and its nearest neighbour rising with similarity.](/posts/the-model-was-fine-the-labels-werent/families.png)
 *Below 0.5, a ticket's closest neighbour shares its department only about a third of the time: related, not the same ticket. From 0.60 up, agreement climbs from 76% to over 99%. That jump is where I set the threshold.*
 
-The result: 16,338 tickets fell into 7,985 families, and **77% of tickets have at least one reworded sibling.** <mark>From then on, every split kept each family entirely on one side.</mark>
+The result: 16,338 tickets fell into 7,985 families, and **77% of tickets have at least one reworded sibling.** <mark>From then on, every split kept each family entirely on one side.</mark> This is *grouped cross-validation*, here with scikit-learn's [`StratifiedGroupKFold`](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedGroupKFold.html): folds are drawn by family, not by ticket, so a reworded sibling can never sit in the test fold while its twin trains.
 
 Here is what that changed. Same model, same training data, only the way it is tested differs:
 
@@ -83,7 +91,7 @@ A 33-point gap, caused only by how the test was built. If I had stopped at the s
 
 <div className="highlight-section">
 
-## When the label is the problem
+## How do you tell when the labels are the problem?
 
 38.4% against a 29% floor is barely a model. The obvious move was to reach for a bigger model. But the evidence was pointing somewhere else.
 
@@ -101,15 +109,15 @@ So I ran a direct test of the label itself. Keep the text, the model and the hon
 
 That settled it. <mark>The text carries plenty of signal, and the department labels don't follow it.</mark>
 
-I switched the target to **ticket type**: Incident, Request, Problem or Change. It isn't a consolation prize. These are the standard categories from ITIL, a widely used IT service framework, and each one is a real routing decision. Incidents go to on-call, Requests to the service desk, Changes to change management, Problems to root-cause work. And it is learnable from the text, which department was not.
+I switched the target to **ticket type**: Incident, Request, Problem or Change. It isn't a consolation prize. These are the standard categories from [ITIL](https://en.wikipedia.org/wiki/ITIL), a widely used IT service framework, and each one is a real routing decision. Incidents go to on-call, Requests to the service desk, Changes to change management, Problems to root-cause work. And it is learnable from the text, which department was not.
 
 Type had been banned as an *input* in the leakage audit. As an output, it is fine. The test set had never been opened, so I re-drew the split balanced by type and carried every other rule over unchanged.
 
-## Choosing the model
+## Which model fits sparse ticket text?
 
 I compared seven models, plus the two no-intelligence baselines, all tested on family-grouped folds of the training set only. Each ticket becomes a TF-IDF vector of single words and word pairs, 43,077 features in all. Any one ticket uses only a tiny fraction of them.
 
-That shape is why linear models fit. Logistic Regression adds up many small clues from many words, which suits sparse text where no single word decides. Tree-based models like Random Forest judge a ticket by a handful of individual words, which suits dense data with a few strong columns better than this.
+That shape is why linear models fit. [Logistic Regression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html) adds up many small clues from many words, which suits sparse text where no single word decides. Tree-based models like Random Forest judge a ticket by a handful of individual words, which suits dense data with a few strong columns better than this.
 
 ![Grouped bar chart of accuracy and macro F1 for each model predicting ticket type.](/posts/the-model-was-fine-the-labels-werent/models.png)
 *Every model roughly doubles the 40% floor, so the label is learnable. The top linear models land within a point of each other, and the tie-break picks the one that serves every class best.*
@@ -128,7 +136,7 @@ The results backed that up. Four linear models finished within one point of the 
 
 Then I tuned it. I tried 30 settings: word versus character features, longer word sequences, how strongly to regularise, and class weights. The best setting changed accuracy by **−0.2 points**. That is inside the noise, so the simpler baseline stayed. It is an honest ceiling. This kind of bag-of-words model has taken what it can from this data, and a real jump would need a different kind of model.
 
-## Reading the model like its user would
+## Can you trust the model's confidence?
 
 An operations lead won't trust a model because it scored 79%. They'll trust it if they can see what it reads, where it fails, and whether its confidence means anything.
 
@@ -159,7 +167,7 @@ The model is slightly under-confident, which is the safe direction for routing. 
 
 At confidence 0.75 or higher, the ticket routes itself. Everything else goes to a person, and those are mostly the ambiguous Incident-or-Problem tickets, which are exactly the ones a human should look at.
 
-## One look at the test set
+## What did the final test show?
 
 The test set stayed sealed until the very end, and I opened it once, with the model and threshold exactly as validated. To get a range rather than a single number, I resampled whole families 1,000 times. Resampling single tickets would let near-duplicates make the range look tighter than it really is.
 
@@ -201,3 +209,33 @@ The model was never the hard part. Logistic Regression was working fine by step 
 <Callout kind="note" label="The full notebook">
 Every step behind this post, with the code, the charts and every output, is on my projects page: [Ticket Classifier notebook →](https://karthikiyer365.github.io/Live/#tickets)
 </Callout>
+
+## Frequently asked questions
+
+### Why did a random split give 71.5% but a grouped split 38.4%?
+
+77% of tickets have a reworded sibling: 16,338 tickets fell into 7,985 families. In a random split, a ticket's twin sits in training, so the model only has to recognise it. Keeping each family on one side of the split removes that shortcut and gives the honest 38.4%.
+
+### What is macro F1, and why track it?
+
+Macro F1 averages performance across classes, so a small class counts as much as a large one. I track it next to accuracy to catch a model that ignores the small queues. Accuracy picks the winner, and macro F1 breaks ties between models within one point.
+
+### Which model won, and why?
+
+Logistic Regression with balanced class weights, on TF-IDF features of single words and word pairs (43,077 features). It scored 78.8% in cross-validation and 0.805 macro F1, and it found 57% of Problem tickets against 32% without the weights. Three other linear models tied it on accuracy, so macro F1 decided. Tuning 30 settings moved accuracy by −0.2 points, so I kept the simple baseline.
+
+### Is the data real?
+
+No. It is a public Kaggle set of synthetic support tickets, and I kept the 16,338 English ones. The results show the method works. A real inbox needs revalidation before anyone relies on the model.
+
+### How does the auto-routing work?
+
+A ticket whose top confidence is 0.75 or higher routes itself, and everything else goes to a person. On the test set that was 46% of tickets at 96.4% accuracy. The rest are mostly ambiguous Incident-or-Problem tickets, which a human should read.
+
+### Which tools did I use?
+
+Python, scikit-learn for TF-IDF, Logistic Regression and grouped cross-validation, and SciPy to find the connected groups of near-duplicate tickets.
+
+### What would I do next?
+
+Add German using family detection that works across languages, and compare a sentence-embedding model on the same grouped test. That is the obvious way past the ceiling of a bag-of-words model.

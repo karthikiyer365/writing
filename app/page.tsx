@@ -2,6 +2,8 @@ import { getAllPosts, formatDate } from "@/lib/posts";
 import LatestBar from "@/components/LatestBar";
 import styles from "./index.module.css";
 
+export const metadata = { alternates: { canonical: "/" } };
+
 export default function WritingIndex() {
   const posts = getAllPosts();
 

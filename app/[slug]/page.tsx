@@ -14,6 +14,8 @@ import TocLinks from "@/components/TocLinks";
 import LatestBar from "@/components/LatestBar";
 import styles from "./post.module.css";
 
+const SITE = "https://writing.karthikiyer.info";
+
 export function generateStaticParams() {
   return getAllPosts().map((p) => ({ slug: p.slug }));
 }
@@ -26,7 +28,31 @@ export async function generateMetadata({ params }: Params) {
   const { slug } = await params;
   const post = getPost(slug);
   if (!post) return {};
-  return { title: post.title, description: post.standfirst };
+  const title = post.seoTitle ?? post.title;
+  const description = post.seoDescription ?? post.standfirst;
+  const url = `/${post.slug}/`;
+  return {
+    // seoTitle is already search-ready, so skip the site suffix; plain titles keep it.
+    title: post.seoTitle ? { absolute: title } : title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url,
+      publishedTime: post.date,
+      modifiedTime: post.updated ?? post.date,
+      authors: ["Karthik Iyer"],
+      images: post.ogImage ? [{ url: post.ogImage, width: 1200, height: 630 }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: post.ogImage ? [post.ogImage] : undefined,
+    },
+  };
 }
 
 export default async function PostPage({ params }: Params) {
@@ -38,8 +64,25 @@ export default async function PostPage({ params }: Params) {
   // below that the layout collapses to a single centred column.
   const hasToc = post.headings.length >= 3;
 
+  // Static HTML, so crawlers see this without running JS.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.seoDescription ?? post.standfirst,
+    datePublished: post.date,
+    dateModified: post.updated ?? post.date,
+    mainEntityOfPage: `${SITE}/${post.slug}/`,
+    image: post.ogImage ? `${SITE}${post.ogImage}` : undefined,
+    author: { "@type": "Person", name: "Karthik Iyer", url: "https://karthikiyer.info" },
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <LatestBar current={post.slug} />
       <main className={hasToc ? styles.withRail : styles.noRail}>
         {hasToc && (
@@ -55,7 +98,7 @@ export default async function PostPage({ params }: Params) {
             <div className={styles.railRule} />
             <div className={styles.railGroup}>
               <span className={`mono ${styles.railLabel}`}>Published</span>
-              <span className={styles.railValue}>{formatDate(post.date)}</span>
+              <time dateTime={post.date} className={styles.railValue}>{formatDate(post.date)}</time>
               <span className={styles.railValue}>{post.readTime} min read</span>
             </div>
           </aside>
@@ -68,7 +111,7 @@ export default async function PostPage({ params }: Params) {
             </span>
             {!hasToc && (
               <span className={`mono ${styles.kickerMeta}`}>
-                {formatDate(post.date)} &middot; {post.readTime} min
+                <time dateTime={post.date}>{formatDate(post.date)}</time> &middot; {post.readTime} min
               </span>
             )}
           </div>

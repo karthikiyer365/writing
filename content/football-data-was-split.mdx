@@ -92,33 +92,79 @@ Together these make fetching *idempotent*: running it twice leaves things exactl
 
 Cached files on disk still aren't a database, though. Next: the shape the data takes when it lands.
 
+## The database: eight tables, one rule
+
+The five sources arrive with five different ideas of what a row is. If the tables don't agree on that, every join after them quietly gives wrong answers. So the database runs on one rule: <mark>every table's primary key is its grain.</mark> The key says exactly what one row is, and the database refuses to store the same thing twice.
+
+![Diagram of the eight tables. player_xref decides each player's Transfermarkt id for player_season. player_season links to transfers and to shots, and feeds age_curve. Shots link to match xG by game. Matches and club Elo share only a club name.](/posts/football-data-was-split/tables.svg)
+*Eight tables in three groups. Players and price sit on the left, shot data on the right, clubs and matches below. The pink line is the one join that doesn't work cleanly yet.*
+
+| Table | One row is | Key | Links to | Rows |
+|---|---|---|---|---|
+| `player_season` | a player's season at one club | league, season, club, name | transfers by `tm_id`, shots by Understat id | ~50k |
+| `player_xref` | one matching decision | league, season, club, FBref name | `player_season` | ~51k |
+| `transfers` | one move between clubs | `tm_id`, date | `player_season` | ~175k |
+| `age_curve` | average value at one age, one position | position, age | built from `player_season` | 76 |
+| `shots_understat` | one shot | league, season, shot id | match xG by `game_id` | ~550k |
+| `team_match_understat` | one match's xG | league, season, game id | shots | ~22k |
+| `matches` | one result | league, season, date, home, away | club Elo, by name only | ~33k |
+| `club_elo` | a club's rating on a date | club, league, date | matches, by name only | ~190k |
+
+The same key does a second job when data is loaded. Each table's load step updates a row when its key already exists, and the code pins that key to the table's primary key, so the two can't drift apart:
+
+```python
+CONFLICT_KEY_PLAYER_SEASON = "league,season,team,player_name"  # matches 0001 PK
+TRANSFERS_CONFLICT_KEY = "tm_id,transfer_date"                 # matches 0002 PK
+SHOTS_CONFLICT_KEY = "league,season,shot_id"                   # matches 0010 PK
+```
+
+Most keys are made of several plain facts rather than one ID. That is a *composite natural key*, and I used it because no ID covers every source: the FBref data I pull has no player ID at all. League, season, club and name are facts every source agrees on. The rule caught one real collision. Deportivo had two players called Adrián López in 2009, so the key rejected the pair. <mark>Now a duplicate name gets its birth year added, and only the player with more minutes keeps the price match</mark>, because the matching couldn't tell which one Transfermarkt meant.
+
+### The same words in every table
+
+A join only works if both sides use the same labels. FBref writes the 2023/24 season as `2324`, and Understat uses its own code. In this database it is `2023` everywhere: the year the season started. League names are spelled one way in every table. Columns use plain names instead of each source's shorthand, so FBref's `Gls` lands as `goals` and stays that way whichever source adds the next column. <mark>Every table speaks the same language, so any two can be joined without translating first.</mark>
+
+### One wide table for players
+
+`player_season` holds stats, market value and xG for a player-season in a single row, even though they come from three sources. I kept them together because the site reads data straight from the browser, and a player page should take one request, not three requests stitched together on someone's phone. The cost is a wide table that three different pipeline steps write into, which is why their order matters later on.
+
+### Built from the data, not fetched
+
+`age_curve` doesn't come from any source. It is the average market value for each position at each age, worked out from `player_season`. Only players with 450 or more minutes count, and an age needs at least 30 players before it gets a value, so a handful of 16-year-olds can't bend the curve. I store the result, all 76 rows of it, because the public database API doesn't allow averaging queries, and the browser shouldn't average 50,000 rows every time someone opens a player page. That is a *derived table*: computed once per refresh, read many times.
+
+### Growing without breaking
+
+The schema lives in 11 SQL migration files, one per change. <mark>Each one only adds: a new table, or new columns. Nothing is ever renamed or dropped.</mark> `player_season` grew three times this way, adding cleaning columns, then defending and goalkeeping stats, then xG. The site kept working through each change because nothing it already read ever moved. Each new table also gets its public read-only rule in the same file that creates it, so no table exists even for a moment without one.
+
+### No foreign keys, on purpose
+
+A foreign key makes the database reject a row whose partner row doesn't exist yet, such as a transfer for a player who isn't in `player_season`. I left them out for two reasons:
+
+- **Sources load on different days.** Transfers refresh on Mondays and Thursdays, and each league's player stats on its own weekday. A foreign key would reject a transfer that arrived before its player.
+- **Coverage is honestly partial.** About 7% of players have no Transfermarkt match, and the transfer feed covers every league in the world, not just the Big 5. Foreign keys would force fake partner rows or block real data.
+
+So tables are joined on shared columns, and the next section is what makes those joins trustworthy. `tm_id` is the column that puts a price next to a performance, and the FBref data doesn't have one.
+
 {/* ── DRAFT: sections below are outlined, not written ──
 
-## The database: eight tables, one rule
-- primary key = grain = upsert key; ER diagram (image 3)
-- table: table → one row is → key → joins to → ~rows
-- concepts: composite natural key, derived table (age_curve), additive migrations (10 files)
-- no foreign keys: sources load on different days + ~7% of players have no tm_id
-- bridge: tm_id joins stats to price, and FBref doesn't have one
-
-## Matching: one player out of many names
+SECTION: Matching: one player out of many names
 - Gabriel Magalhães vs "Gabriel"; matching ladder strictest → loosest, birth-year guard
 - funnel: overrides <1% · mapping file ~70% · exact ~20% · fuzzy ~3% · unmatched ~7%
 - snippet: year_ok; concepts: entity resolution, blocking, precision over recall
 - Callout warn: Nathan Doyle vs Nathan Dyer
 - Understat: minutes guard, ties rejected, ~94% matched; player_xref stores method + confidence
 
-## Cleaning rules are product decisions
+SECTION: Cleaning rules are product decisions
 - 450-minute floor · age from birth year · stale-value flag · missing is not zero
 
-## Loading and refreshing
+SECTION: Loading and refreshing
 - upsert in batches of 500; split by IP trust; one league per weekday; dependency order
 - season derived from the date; Elo outage = warning, not failure; retries with back-off
 
-## Serving
+SECTION: Serving
 - RLS read-only snippet; site via PostgREST; bucket for ~4,800 VAEP files; MCP server
 
-## What's still rough
+SECTION: What's still rough
 - upsert never deletes · no club matching table · manual migrations · Mac must be awake · partial transfers
 - one line on tests (~45, all offline); bridge to the next post
 

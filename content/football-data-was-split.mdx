@@ -3,7 +3,7 @@ title: Football data was split. This is the pipeline that joined it.
 standfirst: A player's goals live on one site, his price on another and his shot quality on a third, and no two of them agree on his name. This is how I pulled five sources into one database the whole site can trust.
 date: 2026-10-01
 category: data-engineering
-readTime: 16
+readTime: 21
 featured: true
 hero: /posts/football-data-was-split/hero.svg
 project: https://sports.karthikiyer.info
@@ -50,7 +50,7 @@ That "one row is" column is the most important one. Data engineers call it the *
 
 The last row works differently. StatsBomb and Wyscout record every pass, carry, shot and tackle, but they log them in different ways. So I convert both into one shared format called SPADL, using the open-source `socceraction` library. Once every action looks the same, a model can put a value on each one: how much it raised the team's chance of scoring, minus how much it raised the chance of conceding. That value is called VAEP.
 
-Open event data covers 9 full league-seasons: four leagues in 2015/16 from StatsBomb, all five in 2017/18 from Wyscout. I train one model per league-season, because two providers logging the same match differently would make cross-provider comparisons meaningless. The output is about 4,800 small files, one per player, and they get their own storage, covered under serving below. The method gets its own post.
+Open event data covers 9 full league-seasons: four leagues in 2015/16 from StatsBomb, all five in 2017/18 from Wyscout. I train one model per league-season, because two providers logging the same match differently would make cross-provider comparisons meaningless. The output is about 4,800 small files, one per player, and they live in their own storage, outside the database. The method gets its own post.
 
 Five sources means five different ways to fail: slow downloads, blocked requests and files that change under you. So the first layer is fetching, and I wanted it boring and repeatable.
 
@@ -221,17 +221,89 @@ The last rule is the quiet one. I only pull tackle and interception stats from 2
 
 The data is now fetched, matched and clean. Next is getting it into the database, and keeping it fresh without anyone watching.
 
-{/* ── DRAFT: sections below are outlined, not written ──
+## Loading and refreshing
 
-SECTION: Loading and refreshing
-- upsert in batches of 500; split by IP trust; one league per weekday; dependency order
-- season derived from the date; Elo outage = warning, not failure; retries with back-off
+Two things decide how data gets in. Loading has to be safe to repeat, because the same job runs every week. And the sources can't all be fetched from the same place, because one of them blocks cloud servers.
 
-SECTION: Serving
-- RLS read-only snippet; site via PostgREST; bucket for ~4,800 VAEP files; MCP server
+### Load by upsert, in batches
 
-SECTION: What's still rough
-- upsert never deletes · no club matching table · manual migrations · Mac must be awake · partial transfers
-- one line on tests (~45, all offline); bridge to the next post
+Every load is an *upsert*: update the row if its key already exists, insert it if not. That is what the primary keys from the database section are for. Rows go in batches of 500, so one request never carries the whole table.
 
-*/}
+```python
+for i in range(0, len(records), CHUNK):   # CHUNK = 500
+    client.table(table).upsert(
+        records[i : i + CHUNK], on_conflict=on_conflict
+    ).execute()
+```
+
+<mark>Running a load twice leaves the table exactly as running it once does</mark>, the same idempotent property as fetching. Understat rows follow one more rule: only rows that matched a player are pushed, and they are keyed by that player's own identity. An unmatched shot row can never create an orphan record.
+
+### Split by what each source tolerates
+
+FBref sits behind a Cloudflare challenge that clears only for a real browser on a home connection. From a cloud server, the browser starts, burns five attempts and fails. Everything else is plain downloads. <mark>So I split the jobs by which machine a source will talk to.</mark>
+
+| Where | What runs | When |
+|---|---|---|
+| GitHub Actions | transfers, match results for all 5 leagues in parallel, a Club Elo snapshot | Mondays and Thursdays, 06:00 UTC |
+| My Mac, scheduled with launchd | player stats from FBref, Understat xG, match xG, shots, age curve | one league per weekday, 06:00 |
+
+One league per weekday, because I measured the limit. Fetching all five at once is 15 challenge-gated requests, which FBref refuses from one IP. In a test the first league took 35 minutes and the second was blocked partway. So Monday is the Premier League, Tuesday La Liga, then the Bundesliga, Serie A and Ligue 1. Each league refreshes once a week, not all five in one burst.
+
+### Order is not optional
+
+The stages on the Mac depend on each other. Xref and `player_season` come first, because Understat and the age curve update rows that `player_season` creates. This is the "wide table" cost from earlier: three steps write into it, so they must run in sequence.
+
+```python
+for league in todays:
+    run_season(league, season, force=True)        # 1. matching + player_season
+    for fn in (push_player_xg, push_team_match, push_shots):
+        fn(league, season, force=True)            # 2. fill xG into those rows
+push_age_curve()                                  # 3. once, after all leagues
+```
+
+The age curve runs last and once, because it averages across every league.
+
+### Failing without losing the rest
+
+A scheduled job nobody watches has to fail in a useful way. Each league and each stage runs in its own `try`, and a failure is recorded, not fatal:
+
+- **One league's failure doesn't cost the others.** FBref blocks per IP per day, so a later league can still succeed after an earlier one is refused. The run lists every failure at the end and exits with an error if there was one.
+- **A dead Club Elo feed is a warning, not a failure.** The snapshot is a single day's ratings, so one gap is harmless. Only fetch errors are forgiven. Any other error still fails the run, so I never hide a real bug behind a tolerated one.
+
+### The season picks itself
+
+The jobs never get told which season to refresh. They work it out from today's date:
+
+```python
+SEASON_START_MONTH = 8
+return str(d.year - (1 if d.month < SEASON_START_MONTH else 0))   # '2026' = 2026-27
+```
+
+European seasons start in August, so January to July still belongs to the year before. <mark>Deriving the season from the date means the schedule never needs a yearly edit.</mark>
+
+With the data loaded and refreshing itself, the last step is letting people use it.
+
+## Serving: no server in between
+
+Each page on the sports site asks the database directly. The browser calls Supabase's REST endpoint for a table, with filters in the URL:
+
+```js
+fetch(`${SUPABASE_URL}/rest/v1/${table}?${q}`, ...)
+```
+
+There is no backend of my own to write, deploy or keep running. That only works because the tables are shaped for reading: one wide `player_season` row per player, and the age curve already averaged. <mark>All the hard work happens in the pipeline, so the page has almost nothing left to do.</mark> It also gives the single source of truth from the start of this post a concrete form: a player's goals, price and xG are read from the same row on every page, so two charts can't disagree.
+
+## What's still rough
+
+I would rather list the weak spots than have a reader find them.
+
+- **Loads never delete.** An upsert adds and updates, so a row that disappears from a source stays in my database. If a source corrects or removes history, the old row stays until I clear it by hand.
+- **Clubs have no matching table.** Players are matched carefully. Clubs aren't: `matches` and `club_elo` join on club name alone, and the two sources spell some clubs differently. This is the pink line in the tables diagram, and it is the next thing I would fix.
+- **Migrations are applied by hand.** The 11 SQL files live in the repo, but I run each one in the database console myself. That is safe because every change only adds, but the pipeline itself never applies them.
+- **The FBref chain lives on my Mac.** Those jobs can't run in the cloud, so the refresh depends on one machine of mine being on and online.
+- **Transfers are only partly useful.** The feed covers every league in the world, so many moves belong to players who never appear in the Big 5 data.
+- **Market values lag.** The Transfermarkt dataset is scraped by its maintainer, so a value can be a few weeks old. The stale flag catches year-old values, not week-old ones.
+
+The code has about 90 tests, written to run without touching the live sources, so a change to matching or cleaning can be checked in seconds instead of after a re-scrape.
+
+The pipeline is the unglamorous half of the sports site. Everything built on top of it, from team analysis to player profiles, is only as good as the join underneath.

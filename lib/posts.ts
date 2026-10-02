@@ -21,6 +21,10 @@ export interface PostMeta {
   hero?: string;
   heroAlt?: string;
   project?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  ogImage?: string;
+  updated?: string;
 }
 
 export interface Heading {
@@ -76,6 +80,10 @@ function readPost(fileName: string): Post {
     hero: data.hero,
     heroAlt: data.heroAlt ?? "",
     project: data.project,
+    seoTitle: data.seoTitle,
+    seoDescription: data.seoDescription,
+    ogImage: data.ogImage,
+    updated: data.updated ? normalizeDate(data.updated) : undefined,
     body: content,
     headings,
   };

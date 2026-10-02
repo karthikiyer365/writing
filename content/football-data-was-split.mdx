@@ -3,10 +3,14 @@ title: Football data was split. This is the pipeline that joined it.
 standfirst: A player's goals live on one site, his price on another and his shot quality on a third, and no two of them agree on his name. This is how I pulled five sources into one database the whole site can trust.
 date: 2026-10-01
 category: data-engineering
-readTime: 21
+readTime: 22
 featured: true
 hero: /posts/football-data-was-split/hero.svg
 project: https://sports.karthikiyer.info
+seoTitle: Match football players across FBref, Transfermarkt and Understat
+seoDescription: How I joined five football data sources into one Postgres database, matching ~93% of players to a market value with no shared ID.
+ogImage: /posts/football-data-was-split/og.png
+updated: 2026-10-02
 heroAlt: Diagram of the football data pipeline. Five sources, FBref, Transfermarkt, Understat, results and Elo, and match events, flow through a fetch layer, then player matching and cleaning, into one Supabase database. The site, an MCP server and a file bucket read from it, read-only.
 ---
 
@@ -17,13 +21,17 @@ heroAlt: Diagram of the football data pipeline. Five sources, FBref, Transfermar
   { value: "0", label: "servers: the site reads the database directly" }
 ]} />
 
-## One player, five websites
+<Callout kind="note" label="Short answer">
+Football sites share no player ID, so I match players in a ladder, strictest rule first: a community ID file (70% of players), exact name (20%), then fuzzy name (3%). Every rung checks birth year. About 7% stay unmatched on purpose, because a wrong market value is worse than a blank. The result is one Postgres database of ~50,000 player-seasons that every page on the site reads from.
+</Callout>
+
+## Why is football data split across five websites?
 
 Ask a simple scouting question: <mark>is this player cheap for what he produces?</mark> Answering it takes more than one website. FBref has his goals, assists and minutes. Transfermarkt has his market value and every transfer. Understat has the quality of every shot he took. ClubElo and football-data have how strong his club was and how its matches went. StatsBomb and Wyscout have every touch of the ball, for a few seasons.
 
 None of them share an ID for him, and they often don't share a name either. So the question stays unanswered unless someone joins them.
 
-I built a pipeline that does that join. It pulls all five sources, works out which records are the same player, cleans the numbers and loads them into one database. <mark>Every page on the sports site reads from that one database, so two charts can never disagree.</mark> That is what a *single source of truth* means: each fact lives in one place, and everything else reads it from there.
+I'm Karthik, a data and AI engineer, and I built a pipeline that does that join. It pulls all five sources, works out which records are the same player, cleans the numbers and loads them into one database. <mark>Every page on the sports site reads from that one database, so two charts can never disagree.</mark> That is what a *single source of truth* means: each fact lives in one place, and everything else reads it from there.
 
 It covers the Big 5 leagues across 18 seasons, about 50,000 player-seasons. Here is the whole thing on one page:
 
@@ -32,29 +40,29 @@ It covers the Big 5 leagues across 18 seasons, about 50,000 player-seasons. Here
 
 The rest of this post follows that diagram from top to bottom, starting with what each source actually gives.
 
-## Five sources, each good at one thing
+## What does each football data source provide?
 
 Each source covers a different slice of the game, and each counts in a different unit. FBref thinks in seasons, Transfermarkt in dates, Understat in shots. <mark>So I took only what each source does best, and decided up front what one row means for every one of them.</mark>
 
 | Source | What I take from it | One row is | How it's fetched |
 |---|---|---|---|
-| FBref | goals, assists, minutes, tackles, saves | a player's season at one club | a real browser, because the site screens out robots |
-| Transfermarkt | market values, transfers, birth dates | a player on a date | an open dataset on Kaggle, scraped by its maintainer, so values can be a few weeks old |
-| Understat | xG, xA, every shot with its location | a player's season, or one shot | plain web requests, from 2014 on |
-| football-data · ClubElo | match results · club strength ratings | a match · a club on a date | a CSV file · a web request |
-| StatsBomb · Wyscout | every on-ball event in a match | one action | open event data, a few full seasons |
+| [FBref](https://fbref.com) | goals, assists, minutes, tackles, saves | a player's season at one club | a real browser, because the site screens out robots |
+| [Transfermarkt](https://www.transfermarkt.com) | market values, transfers, birth dates | a player on a date | an [open dataset on Kaggle](https://www.kaggle.com/datasets/davidcariboo/player-scores), scraped by its maintainer, so values can be a few weeks old |
+| [Understat](https://understat.com) | xG, xA, every shot with its location | a player's season, or one shot | plain web requests, from 2014 on |
+| [football-data](https://www.football-data.co.uk) · [ClubElo](http://clubelo.com) | match results · club strength ratings | a match · a club on a date | a CSV file · a web request |
+| [StatsBomb](https://github.com/statsbomb/open-data) · Wyscout | every on-ball event in a match | one action | open event data, a few full seasons |
 
 That "one row is" column is the most important one. Data engineers call it the *grain*: the thing a single row represents. <mark>Get it wrong and every join after it counts something twice.</mark> A player who moved clubs in January has two FBref rows that season, one per club. Treat that as one row and his goals get attached to the wrong club.
 
 ### Event data needs one language
 
-The last row works differently. StatsBomb and Wyscout record every pass, carry, shot and tackle, but they log them in different ways. So I convert both into one shared format called SPADL, using the open-source `socceraction` library. Once every action looks the same, a model can put a value on each one: how much it raised the team's chance of scoring, minus how much it raised the chance of conceding. That value is called VAEP.
+The last row works differently. StatsBomb and Wyscout record every pass, carry, shot and tackle, but they log them in different ways. So I convert both into one shared format called SPADL, using the open-source [`socceraction`](https://github.com/ML-KULeuven/socceraction) library. Once every action looks the same, a model can put a value on each one: how much it raised the team's chance of scoring, minus how much it raised the chance of conceding. That value is called VAEP.
 
 Open event data covers 9 full league-seasons: four leagues in 2015/16 from StatsBomb, all five in 2017/18 from Wyscout. I train one model per league-season, because two providers logging the same match differently would make cross-provider comparisons meaningless. The output is about 4,800 small files, one per player, and they live in their own storage, outside the database. The method gets its own post.
 
 Five sources means five different ways to fail: slow downloads, blocked requests and files that change under you. So the first layer is fetching, and I wanted it boring and repeatable.
 
-## Fetching: boring on purpose
+## How do you fetch five sources reliably?
 
 Three problems shaped this layer. Re-downloading a full season is slow. FBref blocks you if you ask too often. And a crash halfway through saving a file leaves a corrupt one behind. <mark>So every source gets exactly one reader, and every reader goes through the same cache.</mark>
 
@@ -92,7 +100,7 @@ Together these make fetching *idempotent*: running it twice leaves things exactl
 
 Cached files on disk still aren't a database, though. Next: the shape the data takes when it lands.
 
-## The database: eight tables, one rule
+## How should the database tables be designed?
 
 The five sources arrive with five different ideas of what a row is. If the tables don't agree on that, every join after them quietly gives wrong answers. So the database runs on one rule: <mark>every table's primary key is its grain.</mark> The key says exactly what one row is, and the database refuses to store the same thing twice.
 
@@ -145,14 +153,14 @@ A foreign key makes the database reject a row whose partner row doesn't exist ye
 
 So tables are joined on shared columns, and the next section is what makes those joins trustworthy. `tm_id` is the column that puts a price next to a performance, and the FBref data doesn't have one.
 
-## Matching: one player out of many names
+## How do you match a player across FBref and Transfermarkt?
 
-FBref lists Arsenal's centre-back as `Gabriel Magalhães`. Transfermarkt lists him as `Gabriel`. Neither site knows the other exists, so there is no ID to join on and names are all I have. Matching on names is risky, because two players can share one and one player can have several. <mark>So I match in a ladder, strictest rule first, and a player only drops to a looser rule when every stricter one has failed.</mark> Data people call this *entity resolution*: deciding which records across sources describe the same real thing.
+Matching the same player across FBref and Transfermarkt is an *entity resolution* problem: deciding which records from different sources describe the same real thing. FBref lists Arsenal's centre-back as `Gabriel Magalhães`. Transfermarkt lists him as `Gabriel`. Neither site knows the other exists, so there is no ID to join on and names are all I have. Matching on names is risky, because two players can share one and one player can have several. <mark>So I match in a ladder, strictest rule first, and a player only drops to a looser rule when every stricter one has failed.</mark>
 
 ![Bar chart of how 51,500 player records were matched. Mapping file 70 percent, exact name 20 percent, fuzzy name 3 percent, manual override under 1 percent, no match 7 percent.](/posts/football-data-was-split/funnel.svg)
 *Each record is tried against the rungs in order and stops at the first that holds. Most never get past the second.*
 
-The top rung is a community-maintained file of FBref-to-Transfermarkt IDs. I use it first because someone has already checked those pairs, and it settles 70% of players. Exact name settles another 20%. Only about 10% reach fuzzy matching, where two names are close but not identical, such as an accent or a dropped middle name. It rescues 3% of all players, and the other 7% stay unmatched.
+The top rung is a [community-maintained file](https://github.com/JaseZiv/worldfootballR_data) of FBref-to-Transfermarkt IDs. I use it first because someone has already checked those pairs, and it settles 70% of players. Exact name settles another 20%. Only about 10% reach fuzzy matching, where two names are close but not identical, such as an accent or a dropped middle name. It rescues 3% of all players, and the other 7% stay unmatched.
 
 ### The birth-year guard
 
@@ -194,7 +202,7 @@ Understat is matched to `player_season` the same way, but it publishes no birth 
 
 Matching tells me *who* each row is. It doesn't tell me what the numbers on that row are allowed to claim, and that is the next job.
 
-## Cleaning rules are product decisions
+## What cleaning rules does football data need?
 
 Several raw FBref numbers mislead on their own. A bench player with one goal in four minutes scores 22.5 goals per 90. <mark>Deciding what the site may claim from a number is a product decision, not a data-cleaning detail, so all of the rules live in one function, `clean()`, which runs on every frame before it is cached or loaded.</mark>
 
@@ -221,7 +229,7 @@ The last rule is the quiet one. I only pull tackle and interception stats from 2
 
 The data is now fetched, matched and clean. Next is getting it into the database, and keeping it fresh without anyone watching.
 
-## Loading and refreshing
+## How is the database loaded and refreshed?
 
 Two things decide how data gets in. Loading has to be safe to repeat, because the same job runs every week. And the sources can't all be fetched from the same place, because one of them blocks cloud servers.
 
@@ -283,7 +291,7 @@ European seasons start in August, so January to July still belongs to the year b
 
 With the data loaded and refreshing itself, the last step is letting people use it.
 
-## Serving: no server in between
+## How does the site read the data?
 
 Each page on the sports site asks the database directly. The browser calls Supabase's REST endpoint for a table, with filters in the URL:
 
@@ -293,7 +301,7 @@ fetch(`${SUPABASE_URL}/rest/v1/${table}?${q}`, ...)
 
 There is no backend of my own to write, deploy or keep running. That only works because the tables are shaped for reading: one wide `player_season` row per player, and the age curve already averaged. <mark>All the hard work happens in the pipeline, so the page has almost nothing left to do.</mark> It also gives the single source of truth from the start of this post a concrete form: a player's goals, price and xG are read from the same row on every page, so two charts can't disagree.
 
-## What's still rough
+## What is still rough in the pipeline?
 
 I would rather list the weak spots than have a reader find them.
 
@@ -307,3 +315,31 @@ I would rather list the weak spots than have a reader find them.
 The code has about 90 tests, written to run without touching the live sources, so a change to matching or cleaning can be checked in seconds instead of after a re-scrape.
 
 The pipeline is the unglamorous half of the sports site. Everything built on top of it, from team analysis to player profiles, is only as good as the join underneath.
+
+## Frequently asked questions
+
+### How do you match football players between FBref and Transfermarkt?
+
+Neither site shares an ID, so I match in a ladder, strictest rule first: a community ID file settles 70% of players, exact name 20% and fuzzy name 3%. Each rung also checks that birth years are within one year. The remaining 7% stay unmatched on purpose, because a wrong market value is worse than a blank.
+
+### Which data sources does the pipeline use?
+
+FBref for season stats, Transfermarkt (through a Kaggle dataset) for market values and transfers, and Understat for xG and shots. Match results and club strength come from football-data and ClubElo. StatsBomb and Wyscout open event data cover a few full seasons.
+
+### What tools does the pipeline use?
+
+Python with pandas, parquet files as the cache, `soccerdata` to read the sites and `socceraction` for event data. The database is Supabase Postgres. Scheduling is GitHub Actions for sources that tolerate cloud servers and launchd on my Mac for FBref.
+
+### How often is the data refreshed?
+
+Transfers, match results and Club Elo refresh on Mondays and Thursdays through GitHub Actions. The FBref-based data refreshes one league per weekday on my Mac, so each league updates once a week.
+
+### How much data does it cover?
+
+The Big 5 leagues across 18 seasons: about 50,000 player-seasons and 550,000 shots. About 93% of players have a Transfermarkt market value attached.
+
+### What was the hardest part?
+
+Matching. Names differ across sites, and the cost of a wrong match is a confident wrong number nobody can spot. So the pipeline uses a birth-year guard, a short list of hand-checked overrides, and it refuses ties instead of guessing.
+
+*Numbers as of October 2026. The pipeline feeds the [sports site](https://sports.karthikiyer.info).*

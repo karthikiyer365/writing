@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" role="img" aria-labelledby="t d">
+  <title id="t">How 51,500 player records were matched</title>
+  <desc id="d">Bar chart of matching methods, tried strictest first. Mapping file matched 70 percent, exact name 20 percent, fuzzy name 3 percent, manual override under 1 percent. 7 percent stayed unmatched.</desc>
+  <defs>
+    <style>
+      .rung { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 700; fill: #1a1a1a; }
+      .note { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12.5px; fill: #6b6b6b; }
+      .pct { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; fill: #dd0077; }
+      .bar { fill: #1a1a1a; }
+      .miss { fill: #c9c9c9; }
+    </style>
+  </defs>
+
+  <rect width="760" height="330" fill="#fafafa"/>
+
+  <g font-family="Geist Mono, ui-monospace, monospace" font-size="12" letter-spacing="2" fill="#dd0077">
+    <text x="30" y="36">51,500 DECISIONS · STRICTEST RUNG FIRST</text>
+  </g>
+
+  <!-- 1 override -->
+  <text x="30" y="82" class="rung">1 · override</text>
+  <text x="30" y="100" class="note">checked by hand</text>
+  <rect x="220" y="68" width="3" height="26" class="bar"/>
+  <text x="236" y="87" class="pct">&lt;1%</text>
+
+  <!-- 2 mapping file -->
+  <text x="30" y="132" class="rung">2 · mapping file</text>
+  <text x="30" y="150" class="note">community list of ids</text>
+  <rect x="220" y="118" width="420" height="26" class="bar"/>
+  <text x="652" y="137" class="pct">70%</text>
+
+  <!-- 3 exact -->
+  <text x="30" y="182" class="rung">3 · exact name</text>
+  <text x="30" y="200" class="note">same name, birth year within 1</text>
+  <rect x="220" y="168" width="120" height="26" class="bar"/>
+  <text x="352" y="187" class="pct">20%</text>
+
+  <!-- 4 fuzzy -->
+  <text x="30" y="232" class="rung">4 · fuzzy name</text>
+  <text x="30" y="250" class="note">close spelling, birth year within 1</text>
+  <rect x="220" y="218" width="20" height="26" class="bar"/>
+  <text x="252" y="237" class="pct">3%</text>
+
+  <!-- unmatched -->
+  <text x="30" y="292" class="rung">no match</text>
+  <text x="30" y="310" class="note">left blank, never guessed</text>
+  <rect x="220" y="268" width="40" height="26" class="miss"/>
+  <text x="272" y="287" class="pct">7%</text>
+</svg>

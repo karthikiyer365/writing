@@ -3,7 +3,7 @@ title: Football data was split. This is the pipeline that joined it.
 standfirst: A player's goals live on one site, his price on another and his shot quality on a third, and no two of them agree on his name. This is how I pulled five sources into one database the whole site can trust.
 date: 2026-10-01
 category: data-engineering
-readTime: 14
+readTime: 16
 featured: true
 hero: /posts/football-data-was-split/hero.svg
 project: https://sports.karthikiyer.info
@@ -145,17 +145,83 @@ A foreign key makes the database reject a row whose partner row doesn't exist ye
 
 So tables are joined on shared columns, and the next section is what makes those joins trustworthy. `tm_id` is the column that puts a price next to a performance, and the FBref data doesn't have one.
 
+## Matching: one player out of many names
+
+FBref lists Arsenal's centre-back as `Gabriel Magalhães`. Transfermarkt lists him as `Gabriel`. Neither site knows the other exists, so there is no ID to join on and names are all I have. Matching on names is risky, because two players can share one and one player can have several. <mark>So I match in a ladder, strictest rule first, and a player only drops to a looser rule when every stricter one has failed.</mark> Data people call this *entity resolution*: deciding which records across sources describe the same real thing.
+
+![Bar chart of how 51,500 player records were matched. Mapping file 70 percent, exact name 20 percent, fuzzy name 3 percent, manual override under 1 percent, no match 7 percent.](/posts/football-data-was-split/funnel.svg)
+*Each record is tried against the rungs in order and stops at the first that holds. Most never get past the second.*
+
+The top rung is a community-maintained file of FBref-to-Transfermarkt IDs. I use it first because someone has already checked those pairs, and it settles 70% of players. Exact name settles another 20%. Only about 10% reach fuzzy matching, where two names are close but not identical, such as an accent or a dropped middle name. It rescues 3% of all players, and the other 7% stay unmatched.
+
+### The birth-year guard
+
+A name alone isn't proof, so every rung except the manual one also checks the birth year. If FBref and Transfermarkt disagree by more than a year, the pair is rejected, however well the names match.
+
+```python
+def year_ok(tm_id) -> bool:
+    ty = year_by_id.get(tm_id)
+    return not (
+        pd.notna(b) and ty is not None and pd.notna(ty)
+        and abs(int(b) - int(ty)) > 1   # more than a year apart: different people
+    )
+```
+
+I allow one year of slack so a small recording difference doesn't reject a real match. A missing birth year never rejects a match: the guard only blocks a pair when both sites state a year and the years disagree.
+
+### Two fixes that keep fuzzy honest
+
+- **Blocking.** Comparing every leftover name against all 32,000 players in the registry makes a backfill crawl. So fuzzy only compares names that share at least one word. This is *blocking*: cut the candidates down cheaply before the expensive comparison.
+- **One-word names don't count as subsets.** `Angel Di Maria` should match `Angel Di Maria Hernandez`, because the short name sits inside the legal one. But `Alan` sits inside half the league. So a subset match only counts when the shorter name has two or more words.
+
+<Callout kind="warn" label="Why the guard isn't enough">
+Nathan Doyle and Nathan Dyer share a first name, were born in the same year, and their names score above the fuzzy threshold. No automatic rule can tell them apart. So the code has a short override list of hand-checked verdicts, and it runs before every rung. Doyle is forced to unmatched. Eleven mononym players, such as `Jota` or `Bruno`, get their correct ID the same way.
+</Callout>
+
+### Wrong is worse than missing
+
+Every threshold above leans the same way. <mark>I chose precision over recall: I would rather leave 7% of players without a price than attach the wrong price to a few of them.</mark> A blank shows up on the site as a blank. A wrong match shows up as a confident wrong number, and nobody can tell it is wrong. Unmatched players simply get no market value.
+
+Each decision is stored in `player_xref` with the method that made it and a confidence score: 1.0 for the exact rungs, the name similarity for fuzzy ones. So any price on the site can be traced back to how it was matched.
+
+### Understat has no birth years
+
+Understat is matched to `player_season` the same way, but it publishes no birth year. The guard here is minutes played. If the two sources disagree by more than 450 minutes for the same name, the pair is rejected. Three rules follow from that:
+
+- A name that appears more than once in a season, usually a mid-season transfer with one row per club, is paired by closest minutes.
+- The fuzzy threshold is stricter, 0.90 instead of 0.85, because the birth-year check is gone.
+- **Ties are rejected, not guessed.** If two players fit one Understat row equally well, neither gets the xG. A missing xG is better than one that belongs to someone else.
+
+Matching tells me *who* each row is. It doesn't tell me what the numbers on that row are allowed to claim, and that is the next job.
+
+## Cleaning rules are product decisions
+
+Several raw FBref numbers mislead on their own. A bench player with one goal in four minutes scores 22.5 goals per 90. <mark>Deciding what the site may claim from a number is a product decision, not a data-cleaning detail, so all of the rules live in one function, `clean()`, which runs on every frame before it is cached or loaded.</mark>
+
+| Rule | What it does | Why |
+|---|---|---|
+| 450-minute floor | per-90 rates are blanked below 450 minutes, about five full games. Raw counts like goals stay | a rate on a tiny sample is noise |
+| Age from birth year | age is the season's start year minus birth year | FBref's own age column drifts by league |
+| Value as of season end | each row gets the latest Transfermarkt value on or before the season's end date | a 2016 player must not carry a 2024 price |
+| Stale-value flag | `value_is_stale` is true when that value is over a year old at season end | Transfermarkt stops revaluing some players, and the site should show that |
+| Missing is not zero | a stat that was never recorded stays blank | zero says "did nothing". Blank says "unknown" |
+
+The floor is the one that matters most:
+
+```python
+MIN_MINUTES_FOR_RATES = 450  # ponytail: one global floor; 5 full games
+
+thin = df["minutes"] < MIN_MINUTES_FOR_RATES
+df.loc[thin, [c for c in RATE_COLS if c in df.columns]] = pd.NA
+```
+
+I chose one global floor for every position and league. That is crude, because a goalkeeper and a striker accrue minutes differently. But it is easy to explain on a chart footnote, and it is the same 450 the `age_curve` table uses.
+
+The last rule is the quiet one. I only pull tackle and interception stats from 2017 on, and a few players are missing from those pages. Their tackles-plus-interceptions rate is left blank, not set to 0. Zero would rank a player who was never measured below one who really did nothing.
+
+The data is now fetched, matched and clean. Next is getting it into the database, and keeping it fresh without anyone watching.
+
 {/* ── DRAFT: sections below are outlined, not written ──
-
-SECTION: Matching: one player out of many names
-- Gabriel Magalhães vs "Gabriel"; matching ladder strictest → loosest, birth-year guard
-- funnel: overrides <1% · mapping file ~70% · exact ~20% · fuzzy ~3% · unmatched ~7%
-- snippet: year_ok; concepts: entity resolution, blocking, precision over recall
-- Callout warn: Nathan Doyle vs Nathan Dyer
-- Understat: minutes guard, ties rejected, ~94% matched; player_xref stores method + confidence
-
-SECTION: Cleaning rules are product decisions
-- 450-minute floor · age from birth year · stale-value flag · missing is not zero
 
 SECTION: Loading and refreshing
 - upsert in batches of 500; split by IP trust; one league per weekday; dependency order

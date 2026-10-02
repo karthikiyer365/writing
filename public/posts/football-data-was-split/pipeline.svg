@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 860" role="img" aria-labelledby="t d">
+  <title id="t">The football data pipeline, layer by layer</title>
+  <desc id="d">Six layers from top to bottom. Sources: FBref, Transfermarkt, Understat, results and Elo, match events. Fetch: one reader per source, a cache keyed by the request, a manifest per fetch. Build: match players, merge and clean, add xG, derive the age curve, and value every action for the event data. Load: upsert on each table's key in batches of 500. Store: eight Supabase tables. Serve: the static site, a file bucket and an MCP server, all read-only.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9b9b9b"/>
+    </marker>
+    <style>
+      .sans { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .mono { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .layer { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 2px; fill: #dd0077; }
+      .box { fill: #ffffff; stroke: #c9c9c9; stroke-width: 2; }
+      .label { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #1a1a1a; }
+      .note { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: #6b6b6b; }
+      .flow { stroke: #9b9b9b; stroke-width: 2.5; fill: none; }
+    </style>
+  </defs>
+
+  <rect width="760" height="860" fill="#fafafa"/>
+
+  <!-- 1 SOURCES -->
+  <text x="40" y="44" class="layer">1 · SOURCES</text>
+  <g text-anchor="middle">
+    <rect x="40" y="58" width="128" height="52" rx="6" class="box"/>
+    <text x="104" y="82" class="label">FBref</text>
+    <text x="104" y="100" class="note">season stats</text>
+    <rect x="178" y="58" width="128" height="52" rx="6" class="box"/>
+    <text x="242" y="82" class="label">Transfermarkt</text>
+    <text x="242" y="100" class="note">values, moves</text>
+    <rect x="316" y="58" width="128" height="52" rx="6" class="box"/>
+    <text x="380" y="82" class="label">Understat</text>
+    <text x="380" y="100" class="note">xG, shots</text>
+    <rect x="454" y="58" width="128" height="52" rx="6" class="box"/>
+    <text x="518" y="82" class="label">Results · Elo</text>
+    <text x="518" y="100" class="note">matches, clubs</text>
+    <rect x="592" y="58" width="128" height="52" rx="6" class="box"/>
+    <text x="656" y="82" class="label">Match events</text>
+    <text x="656" y="100" class="note">every touch</text>
+  </g>
+  <line x1="380" y1="118" x2="380" y2="146" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- 2 FETCH -->
+  <text x="40" y="170" class="layer">2 · FETCH</text>
+  <rect x="40" y="182" width="680" height="64" rx="8" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.5"/>
+  <g text-anchor="middle">
+    <text x="153" y="208" class="label">reader</text>
+    <text x="153" y="228" class="note">one file per source</text>
+    <text x="380" y="208" class="label">cache</text>
+    <text x="380" y="228" class="note">keyed by the request</text>
+    <text x="607" y="208" class="label">manifest</text>
+    <text x="607" y="228" class="note">what, how many, when</text>
+  </g>
+  <line x1="248" y1="210" x2="300" y2="210" class="flow" marker-end="url(#arrow)"/>
+  <line x1="460" y1="210" x2="512" y2="210" class="flow" marker-end="url(#arrow)"/>
+  <line x1="380" y1="254" x2="380" y2="282" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- 3 BUILD -->
+  <text x="40" y="306" class="layer">3 · BUILD</text>
+  <g text-anchor="middle">
+    <rect x="40" y="318" width="152" height="64" rx="6" class="box"/>
+    <text x="116" y="344" class="label">Match players</text>
+    <text x="116" y="364" class="note">FBref ↔ Transfermarkt</text>
+    <rect x="216" y="318" width="152" height="64" rx="6" class="box"/>
+    <text x="292" y="344" class="label">Merge + clean</text>
+    <text x="292" y="364" class="note">stats + price</text>
+    <rect x="392" y="318" width="152" height="64" rx="6" class="box"/>
+    <text x="468" y="344" class="label">Add xG</text>
+    <text x="468" y="364" class="note">Understat ↔ hub</text>
+    <rect x="568" y="318" width="152" height="64" rx="6" class="box"/>
+    <text x="644" y="344" class="label">Age curve</text>
+    <text x="644" y="364" class="note">derived from hub</text>
+  </g>
+  <g class="flow" marker-end="url(#arrow)">
+    <line x1="192" y1="350" x2="210" y2="350"/>
+    <line x1="368" y1="350" x2="386" y2="350"/>
+    <line x1="544" y1="350" x2="562" y2="350"/>
+  </g>
+  <text x="40" y="404" class="note">order matters: each step updates rows the step before wrote</text>
+  <g text-anchor="middle">
+    <rect x="40" y="418" width="328" height="52" rx="6" class="box" stroke-dasharray="6 5"/>
+    <text x="204" y="442" class="label">Events → SPADL → VAEP</text>
+    <text x="204" y="460" class="note">value of every on-ball action</text>
+  </g>
+  <text x="392" y="440" class="note">separate track: 9 league-seasons,</text>
+  <text x="392" y="458" class="note">one model each</text>
+  <line x1="380" y1="482" x2="380" y2="510" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- 4 LOAD -->
+  <text x="40" y="534" class="layer">4 · LOAD</text>
+  <rect x="40" y="546" width="680" height="48" rx="8" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.5"/>
+  <text x="380" y="576" class="label" text-anchor="middle">upsert on each table's key · 500 rows per batch · re-runs add nothing</text>
+  <line x1="380" y1="602" x2="380" y2="630" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- 5 STORE -->
+  <text x="40" y="654" class="layer">5 · STORE</text>
+  <rect x="40" y="666" width="680" height="76" rx="8" fill="#fdf4f9" stroke="#dd0077" stroke-width="2.5"/>
+  <text x="64" y="694" class="label">Supabase Postgres</text>
+  <g class="note">
+    <text x="64" y="720">player_season · player_xref · transfers · age_curve</text>
+    <text x="64" y="736">matches · club_elo · team_match_understat · shots_understat</text>
+  </g>
+  <text x="696" y="694" class="note" text-anchor="end">public: read-only</text>
+  <line x1="380" y1="750" x2="380" y2="778" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- 6 SERVE -->
+  <text x="40" y="772" class="layer">6 · SERVE</text>
+  <g text-anchor="middle">
+    <rect x="40" y="786" width="210" height="56" rx="6" class="box"/>
+    <text x="145" y="810" class="label">Static site</text>
+    <text x="145" y="828" class="note">reads the API directly</text>
+    <rect x="275" y="786" width="210" height="56" rx="6" class="box"/>
+    <text x="380" y="810" class="label">File bucket</text>
+    <text x="380" y="828" class="note">~4,800 VAEP files</text>
+    <rect x="510" y="786" width="210" height="56" rx="6" class="box"/>
+    <text x="615" y="810" class="label">MCP server</text>
+    <text x="615" y="828" class="note">AI agents query it</text>
+  </g>
+</svg>

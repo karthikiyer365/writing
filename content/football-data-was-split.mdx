@@ -1,0 +1,125 @@
+---
+title: Football data was split. This is the pipeline that joined it.
+standfirst: A player's goals live on one site, his price on another and his shot quality on a third, and no two of them agree on his name. This is how I pulled five sources into one database the whole site can trust.
+date: 2026-10-01
+category: data-engineering
+readTime: 14
+featured: true
+hero: /posts/football-data-was-split/hero.svg
+project: https://sports.karthikiyer.info
+heroAlt: Diagram of the football data pipeline. Five sources, FBref, Transfermarkt, Understat, results and Elo, and match events, flow through a fetch layer, then player matching and cleaning, into one Supabase database. The site, an MCP server and a file bucket read from it, read-only.
+---
+
+<StatStrip stats={[
+  { value: "~50k", label: "player-seasons, Big 5, 18 seasons", accent: true },
+  { value: "~550k", label: "shots, each with its xG" },
+  { value: "~93%", label: "of players matched to a market value" },
+  { value: "0", label: "servers: the site reads the database directly" }
+]} />
+
+## One player, five websites
+
+Ask a simple scouting question: <mark>is this player cheap for what he produces?</mark> Answering it takes more than one website. FBref has his goals, assists and minutes. Transfermarkt has his market value and every transfer. Understat has the quality of every shot he took. ClubElo and football-data have how strong his club was and how its matches went. StatsBomb and Wyscout have every touch of the ball, for a few seasons.
+
+None of them share an ID for him, and they often don't share a name either. So the question stays unanswered unless someone joins them.
+
+I built a pipeline that does that join. It pulls all five sources, works out which records are the same player, cleans the numbers and loads them into one database. <mark>Every page on the sports site reads from that one database, so two charts can never disagree.</mark> That is what a *single source of truth* means: each fact lives in one place, and everything else reads it from there.
+
+It covers the Big 5 leagues across 18 seasons, about 50,000 player-seasons. Here is the whole thing on one page:
+
+![Diagram of the pipeline in six layers: sources, fetch, build, load, store and serve.](/posts/football-data-was-split/pipeline.svg)
+*Six layers, top to bottom. Each one has a single job, and the rest of this post walks through them in order.*
+
+The rest of this post follows that diagram from top to bottom, starting with what each source actually gives.
+
+## Five sources, each good at one thing
+
+Each source covers a different slice of the game, and each counts in a different unit. FBref thinks in seasons, Transfermarkt in dates, Understat in shots. <mark>So I took only what each source does best, and decided up front what one row means for every one of them.</mark>
+
+| Source | What I take from it | One row is | How it's fetched |
+|---|---|---|---|
+| FBref | goals, assists, minutes, tackles, saves | a player's season at one club | a real browser, because the site screens out robots |
+| Transfermarkt | market values, transfers, birth dates | a player on a date | an open dataset on Kaggle, scraped by its maintainer, so values can be a few weeks old |
+| Understat | xG, xA, every shot with its location | a player's season, or one shot | plain web requests, from 2014 on |
+| football-data · ClubElo | match results · club strength ratings | a match · a club on a date | a CSV file · a web request |
+| StatsBomb · Wyscout | every on-ball event in a match | one action | open event data, a few full seasons |
+
+That "one row is" column is the most important one. Data engineers call it the *grain*: the thing a single row represents. <mark>Get it wrong and every join after it counts something twice.</mark> A player who moved clubs in January has two FBref rows that season, one per club. Treat that as one row and his goals get attached to the wrong club.
+
+### Event data needs one language
+
+The last row works differently. StatsBomb and Wyscout record every pass, carry, shot and tackle, but they log them in different ways. So I convert both into one shared format called SPADL, using the open-source `socceraction` library. Once every action looks the same, a model can put a value on each one: how much it raised the team's chance of scoring, minus how much it raised the chance of conceding. That value is called VAEP.
+
+Open event data covers 9 full league-seasons: four leagues in 2015/16 from StatsBomb, all five in 2017/18 from Wyscout. I train one model per league-season, because two providers logging the same match differently would make cross-provider comparisons meaningless. The output is about 4,800 small files, one per player, and they get their own storage, covered under serving below. The method gets its own post.
+
+Five sources means five different ways to fail: slow downloads, blocked requests and files that change under you. So the first layer is fetching, and I wanted it boring and repeatable.
+
+## Fetching: boring on purpose
+
+Three problems shaped this layer. Re-downloading a full season is slow. FBref blocks you if you ask too often. And a crash halfway through saving a file leaves a corrupt one behind. <mark>So every source gets exactly one reader, and every reader goes through the same cache.</mark>
+
+A reader is one Python file per source with one job: fetch a dataset and save it to disk as a parquet file, a compact column-based format that loads fast. Adding a new source means adding one new file. Nothing else changes.
+
+Every fetch then goes through one function, and it checks the cache first:
+
+```python
+key = cache_key(source, dataset, params)   # hash of what was asked for
+if not force and cache_hit(source, key):
+    return read_manifest(source, key)       # already have it: no download
+```
+
+The cache key is a hash of the request itself: the source, the dataset and the parameters, such as league and season. <mark>The same request always lands on the same file</mark>, so a second run costs nothing. That is a *content-addressed cache*: the address comes from what you asked for, not from a filename someone picked.
+
+Every fetch also writes a *manifest*: a small record that sits next to the data and says what it is.
+
+| Manifest field | Why it's there |
+|---|---|
+| `source`, `dataset`, `params` | what was asked for, so the file can be traced back to its request |
+| `rows`, `cols` | a quick check that a refresh didn't come back empty |
+| `date_range` | which dates the data actually covers |
+| `fetched_at` | how old it is |
+| `path` | where the file lives |
+
+Readers return the manifest, not the data. Downstream steps get a pointer and a description, and only load the rows when they need them. That keeps memory flat even when a table runs past half a million shots.
+
+Three smaller decisions make the layer safe to run again and again:
+
+- **Atomic writes.** Each file is written under a temporary name first, then renamed in one step. A crash leaves the old file or the new one, never half of each.
+- **Two kinds of refresh.** `force` rebuilds a derived table from cached sources. `refetch` also re-downloads the sources. Rebuilding after a code change shouldn't mean hitting five websites again.
+- **One error type.** Any failure inside a reader is wrapped in one `SoccerhubError` that names the source and dataset, so a failed run tells you where it broke.
+
+Together these make fetching *idempotent*: running it twice leaves things exactly as running it once does. That matters later, when the same pipeline runs on a schedule with nobody watching.
+
+Cached files on disk still aren't a database, though. Next: the shape the data takes when it lands.
+
+{/* ── DRAFT: sections below are outlined, not written ──
+
+## The database: eight tables, one rule
+- primary key = grain = upsert key; ER diagram (image 3)
+- table: table → one row is → key → joins to → ~rows
+- concepts: composite natural key, derived table (age_curve), additive migrations (10 files)
+- no foreign keys: sources load on different days + ~7% of players have no tm_id
+- bridge: tm_id joins stats to price, and FBref doesn't have one
+
+## Matching: one player out of many names
+- Gabriel Magalhães vs "Gabriel"; matching ladder strictest → loosest, birth-year guard
+- funnel: overrides <1% · mapping file ~70% · exact ~20% · fuzzy ~3% · unmatched ~7%
+- snippet: year_ok; concepts: entity resolution, blocking, precision over recall
+- Callout warn: Nathan Doyle vs Nathan Dyer
+- Understat: minutes guard, ties rejected, ~94% matched; player_xref stores method + confidence
+
+## Cleaning rules are product decisions
+- 450-minute floor · age from birth year · stale-value flag · missing is not zero
+
+## Loading and refreshing
+- upsert in batches of 500; split by IP trust; one league per weekday; dependency order
+- season derived from the date; Elo outage = warning, not failure; retries with back-off
+
+## Serving
+- RLS read-only snippet; site via PostgREST; bucket for ~4,800 VAEP files; MCP server
+
+## What's still rough
+- upsert never deletes · no club matching table · manual migrations · Mac must be awake · partial transfers
+- one line on tests (~45, all offline); bridge to the next post
+
+*/}

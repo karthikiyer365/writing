@@ -5,3 +5,4 @@ next-env.d.ts
 .DS_Store
 *.tsbuildinfo
 .playwright-mcp/
+.env*.local

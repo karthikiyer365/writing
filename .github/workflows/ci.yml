@@ -26,3 +26,5 @@ jobs:
       - run: npm ci
       # next build also runs the TypeScript check
       - run: npm run build
+        env:
+          NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}

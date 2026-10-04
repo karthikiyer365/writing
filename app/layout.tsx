@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
+import ClickTracker from "@/components/ClickTracker";
 import "./globals.css";
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://writing.karthikiyer.info"),
@@ -45,6 +49,19 @@ export default function RootLayout({
           </nav>
         </header>
         {children}
+        {GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+                gtag('js',new Date());gtag('config','${GA_ID}');`}
+            </Script>
+          </>
+        )}
+        <ClickTracker />
         <footer className="site-footer">
           <span>Karthik Iyer — data &amp; AI engineering</span>
           <a href="https://karthikiyer.info">karthikiyer.info</a>

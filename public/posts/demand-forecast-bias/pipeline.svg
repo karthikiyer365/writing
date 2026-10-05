@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 760" role="img" aria-labelledby="t d">
+  <title id="t">The demand forecast pipeline, stage by stage</title>
+  <desc id="d">Six stages from top to bottom. Data: weekly sales for 320 products over 131 weeks, with stockout flags, promotions and prices. Clean: fill stockout weeks with the average of the last two in-stock weeks, and ban columns not known on forecast day. Features: built as of forecast day, proven by a scramble test where 0 of 3,380 rows changed. Model: one gradient boosting model across all products, with the season multiplied in. Test: rolling backtests against simple rules and ETS, then results split by product stage, which shows a 42% over-forecast on dying products. Plan: the p90 of the total as demand to plan for, and a promo planner that flags slowing products.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9b9b9b"/>
+    </marker>
+    <style>
+      .layer { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 2px; fill: #dd0077; }
+      .box { fill: #ffffff; stroke: #c9c9c9; stroke-width: 2; }
+      .hot { fill: #fdf4f9; stroke: #dd0077; stroke-width: 2; }
+      .label { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #1a1a1a; }
+      .note { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: #6b6b6b; }
+      .flow { stroke: #9b9b9b; stroke-width: 2.5; fill: none; }
+    </style>
+  </defs>
+
+  <rect width="760" height="760" fill="#fafafa"/>
+
+  <g text-anchor="middle">
+    <!-- 1 DATA -->
+    <text x="40" y="44" class="layer" text-anchor="start">1 · DATA</text>
+    <rect x="40" y="58" width="216" height="56" rx="6" class="box"/>
+    <text x="148" y="82" class="label">Weekly sales</text>
+    <text x="148" y="101" class="note">320 products · 131 weeks</text>
+    <rect x="272" y="58" width="216" height="56" rx="6" class="box"/>
+    <text x="380" y="82" class="label">Stockout flags</text>
+    <text x="380" y="101" class="note">weeks the shelf ran out</text>
+    <rect x="504" y="58" width="216" height="56" rx="6" class="box"/>
+    <text x="612" y="82" class="label">Promos · prices</text>
+    <text x="612" y="101" class="note">25% off, on or off</text>
+    <path d="M380 118 V172" class="flow" marker-end="url(#arrow)"/>
+
+    <!-- 2 CLEAN -->
+    <text x="40" y="164" class="layer" text-anchor="start">2 · CLEAN</text>
+    <rect x="40" y="178" width="332" height="56" rx="6" class="box"/>
+    <text x="206" y="202" class="label">Fill stockout weeks</text>
+    <text x="206" y="221" class="note">avg of last 2 in-stock weeks</text>
+    <rect x="388" y="178" width="332" height="56" rx="6" class="box"/>
+    <text x="554" y="202" class="label">Ban future columns</text>
+    <text x="554" y="221" class="note">returns · stockouts · answer labels</text>
+    <path d="M380 238 V292" class="flow" marker-end="url(#arrow)"/>
+
+    <!-- 3 FEATURES -->
+    <text x="40" y="284" class="layer" text-anchor="start">3 · FEATURES</text>
+    <rect x="40" y="298" width="332" height="56" rx="6" class="box"/>
+    <text x="206" y="322" class="label">Built as of forecast day</text>
+    <text x="206" y="341" class="note">level · season · trend · promo</text>
+    <rect x="388" y="298" width="332" height="56" rx="6" class="box"/>
+    <text x="554" y="322" class="label">Scramble the future</text>
+    <text x="554" y="341" class="note">0 of 3,380 rows changed</text>
+    <path d="M380 358 V412" class="flow" marker-end="url(#arrow)"/>
+
+    <!-- 4 MODEL -->
+    <text x="40" y="404" class="layer" text-anchor="start">4 · MODEL</text>
+    <rect x="40" y="418" width="332" height="56" rx="6" class="box"/>
+    <text x="206" y="442" class="label">One model, all products</text>
+    <text x="206" y="461" class="note">gradient boosting · 4 wk + 3 mo</text>
+    <rect x="388" y="418" width="332" height="56" rx="6" class="box"/>
+    <text x="554" y="442" class="label">Season multiplied in</text>
+    <text x="554" y="461" class="note">demand ÷ (level × season)</text>
+    <path d="M380 478 V532" class="flow" marker-end="url(#arrow)"/>
+
+    <!-- 5 TEST -->
+    <text x="40" y="524" class="layer" text-anchor="start">5 · TEST</text>
+    <rect x="40" y="538" width="216" height="56" rx="6" class="box"/>
+    <text x="148" y="562" class="label">Rolling backtests</text>
+    <text x="148" y="581" class="note">scored vs true demand</text>
+    <rect x="272" y="538" width="216" height="56" rx="6" class="box"/>
+    <text x="380" y="562" class="label">vs rules + ETS</text>
+    <text x="380" y="581" class="note">15.2% vs 20.5% missed</text>
+    <rect x="504" y="538" width="216" height="56" rx="6" class="hot"/>
+    <text x="612" y="562" class="label">Split by stage</text>
+    <text x="612" y="581" class="note" style="fill:#dd0077">dying products +42%</text>
+    <path d="M380 598 V652" class="flow" marker-end="url(#arrow)"/>
+
+    <!-- 6 PLAN -->
+    <text x="40" y="644" class="layer" text-anchor="start">6 · PLAN</text>
+    <rect x="40" y="658" width="332" height="56" rx="6" class="box"/>
+    <text x="206" y="682" class="label">p90 of the total</text>
+    <text x="206" y="701" class="note">demand to plan for · ~90% cover</text>
+    <rect x="388" y="658" width="332" height="56" rx="6" class="box"/>
+    <text x="554" y="682" class="label">Promo planner</text>
+    <text x="554" y="701" class="note">flags slowing products</text>
+  </g>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" role="img" aria-labelledby="t d">
+  <title id="t">One product's life: APP-1021</title>
+  <desc id="d">Weekly demand for one apparel product from June 2023 to July 2024. It ramps up after launch to about 60 a week, peaks at 193 in late November, settles around 67 a week through spring 2024, then declines from 20 May 2024 to 8 a week by its last week at the end of July. In three stockout weeks it sold 3, 4 and 2 units while customers wanted 53, 54 and 30.</desc>
+  <defs><style>
+    .head { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 2px; fill: #6b6b6b; }
+    .note { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: #6b6b6b; }
+    .ann { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #1a1a1a; }
+  </style></defs>
+  <rect width="760" height="400" fill="#fafafa"/>
+  <text x="40" y="44" class="head">APP-1021 · WEEKLY DEMAND, ONE PRODUCT</text>
+  <rect x="609.8" y="70" width="120.2" height="260" fill="#fdf4f9"/>
+  <line x1="70" y1="330" x2="730" y2="330" stroke="#c9c9c9" stroke-width="1.5"/>
+  <line x1="70" y1="267.5" x2="730" y2="267.5" stroke="#ececec"/><text x="62" y="271.5" class="note" text-anchor="end">50</text>
+  <line x1="70" y1="205.0" x2="730" y2="205.0" stroke="#ececec"/><text x="62" y="209.0" class="note" text-anchor="end">100</text>
+  <line x1="70" y1="142.5" x2="730" y2="142.5" stroke="#ececec"/><text x="62" y="146.5" class="note" text-anchor="end">150</text>
+  <polyline points="70.0,300.0 81.0,306.2 92.0,292.5 103.1,301.2 114.1,295.0 125.1,276.2 136.1,288.8 147.1,278.8 158.1,285.0 169.2,255.0 180.2,253.8 191.2,265.0 202.2,258.8 213.2,255.0 224.2,263.8 235.3,240.0 246.3,253.8 257.3,241.2 268.3,245.0 279.3,252.5 290.3,241.2 301.4,207.5 312.4,197.5 323.4,173.8 334.4,88.8 345.4,207.5 356.4,212.5 367.5,188.8 378.5,225.0 389.5,266.2 400.5,253.8 411.5,262.5 422.5,223.8 433.6,240.0 444.6,220.0 455.6,251.2 466.6,210.0 477.6,252.5 488.6,235.0 499.7,240.0 510.7,233.8 521.7,257.5 532.7,245.0 543.7,243.8 554.7,248.8 565.8,226.2 576.8,258.8 587.8,258.8 598.8,251.2 609.8,273.8 620.8,277.5 631.9,280.0 642.9,286.2 653.9,277.5 664.9,308.8 675.9,292.5 686.9,308.8 698.0,310.0 709.0,323.8 720.0,320.0" fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+  <line x1="224.2" y1="263.8" x2="224.2" y2="326.2" stroke="#dd0077" stroke-width="2" stroke-dasharray="3 3"/><circle cx="224.2" cy="326.2" r="4.5" fill="#dd0077"/>
+  <line x1="411.5" y1="262.5" x2="411.5" y2="325.0" stroke="#dd0077" stroke-width="2" stroke-dasharray="3 3"/><circle cx="411.5" cy="325.0" r="4.5" fill="#dd0077"/>
+  <line x1="675.9" y1="292.5" x2="675.9" y2="327.5" stroke="#dd0077" stroke-width="2" stroke-dasharray="3 3"/><circle cx="675.9" cy="327.5" r="4.5" fill="#dd0077"/>
+  <text x="103.1" y="350" class="note" text-anchor="middle">Jul 2023</text>
+  <text x="301.4" y="350" class="note" text-anchor="middle">Nov</text>
+  <text x="389.5" y="350" class="note" text-anchor="middle">Jan 2024</text>
+  <text x="587.8" y="350" class="note" text-anchor="middle">May</text>
+  <text x="675.9" y="350" class="note" text-anchor="middle">Jul</text>
+  <text x="344.4" y="94.8" class="ann">November rush · 193</text>
+  <text x="224.2" y="380" class="ann" text-anchor="middle" style="fill:#dd0077">stockout: wanted 53, sold 3</text>
+  <text x="745" y="92" text-anchor="end" class="ann" style="fill:#dd0077">decline starts</text>
+  <text x="745" y="110" text-anchor="end" class="note">67/wk → 8/wk in 11 weeks</text>
+  <text x="103.1" y="249.0" class="note">launch</text>
+</svg>

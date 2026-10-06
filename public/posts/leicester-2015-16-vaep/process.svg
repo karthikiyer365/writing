@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 1140" role="img" aria-labelledby="t d">
+  <title id="t">The analysis in nine phases</title>
+  <desc id="d">Nine phases from top to bottom. Data: StatsBomb open data, 380 games. Standardise: SPADL, 758,434 actions. Label: did a goal follow within 10 actions. Split: two halves by game. Model: XGBoost, AUC 0.795 and 0.792. Value: change in scoring chance minus change in conceding chance. Validate: calibration gap at most half a point, team rank correlation 0.768, player reliability 0.313. Group: 30 pitch zones and every player. Stress-test: location, carries, penalties.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#9b9b9b"/></marker>
+    <style>
+      .layer { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 2px; fill: #dd0077; }
+      .box { fill: #ffffff; stroke: #c9c9c9; stroke-width: 2; }
+      .hot { fill: #fdf4f9; stroke: #dd0077; stroke-width: 2; }
+      .label { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #1a1a1a; }
+      .note { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: #6b6b6b; }
+      .flow { stroke: #9b9b9b; stroke-width: 2.5; fill: none; }
+    </style>
+  </defs>
+  <rect width="760" height="1140" fill="#fafafa"/>
+  <g text-anchor="middle">
+    <text x="40" y="44" class="layer" text-anchor="start">1 · DATA</text>
+    <rect x="40" y="58" width="680" height="56" rx="6" class="box"/>
+    <text x="380" y="82" class="label">Every event of the season</text>
+    <text x="380" y="101" class="note">StatsBomb open data · 380 games</text>
+    <path d="M380 118 V172" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="164" class="layer" text-anchor="start">2 · STANDARDISE</text>
+    <rect x="40" y="178" width="680" height="56" rx="6" class="box"/>
+    <text x="380" y="202" class="label">One language for every event</text>
+    <text x="380" y="221" class="note">SPADL · 758,434 actions · 105 × 68 m</text>
+    <path d="M380 238 V292" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="284" class="layer" text-anchor="start">3 · LABEL</text>
+    <rect x="40" y="298" width="680" height="56" rx="6" class="box"/>
+    <text x="380" y="322" class="label">Did a goal follow within 10 actions?</text>
+    <text x="380" y="341" class="note">two labels: scored · conceded</text>
+    <path d="M380 358 V412" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="404" class="layer" text-anchor="start">4 · SPLIT</text>
+    <rect x="40" y="418" width="680" height="56" rx="6" class="box"/>
+    <text x="380" y="442" class="label">Two halves of the season, by game</text>
+    <text x="380" y="461" class="note">no game grades itself</text>
+    <path d="M380 478 V532" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="524" class="layer" text-anchor="start">5 · MODEL</text>
+    <rect x="40" y="538" width="680" height="56" rx="6" class="box"/>
+    <text x="380" y="562" class="label">Chance of scoring, chance of conceding</text>
+    <text x="380" y="581" class="note">XGBoost · AUC 0.795 / 0.792</text>
+    <path d="M380 598 V652" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="644" class="layer" text-anchor="start">6 · VALUE</text>
+    <rect x="40" y="658" width="680" height="56" rx="6" class="box"/>
+    <text x="380" y="682" class="label">Goal threat added by each action</text>
+    <text x="380" y="701" class="note">Δ scoring chance − Δ conceding chance</text>
+    <path d="M380 718 V772" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="764" class="layer" text-anchor="start">7 · VALIDATE</text>
+    <rect x="40" y="778" width="216" height="56" rx="6" class="box"/>
+    <text x="148" y="802" class="label">Calibration</text>
+    <text x="148" y="821" class="note">gap ≤ 0.5 pts</text>
+    <rect x="272" y="778" width="216" height="56" rx="6" class="box"/>
+    <text x="380" y="802" class="label">Team table</text>
+    <text x="380" y="821" class="note">0.768</text>
+    <rect x="504" y="778" width="216" height="56" rx="6" class="box"/>
+    <text x="612" y="802" class="label">Player halves</text>
+    <text x="612" y="821" class="note">0.313</text>
+    <path d="M380 838 V892" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="884" class="layer" text-anchor="start">8 · GROUP</text>
+    <rect x="40" y="898" width="332" height="56" rx="6" class="box"/>
+    <text x="206" y="922" class="label">Where: 30 pitch zones</text>
+    <text x="206" y="941" class="note">value per 100 touches</text>
+    <rect x="388" y="898" width="332" height="56" rx="6" class="box"/>
+    <text x="554" y="922" class="label">Who: every player</text>
+    <text x="554" y="941" class="note">total · per 90 · tiers</text>
+    <path d="M380 958 V1012" class="flow" marker-end="url(#arrow)"/>
+    <text x="40" y="1004" class="layer" text-anchor="start">9 · STRESS-TEST</text>
+    <rect x="40" y="1018" width="680" height="56" rx="6" class="hot"/>
+    <text x="380" y="1042" class="label">Try to break the finding</text>
+    <text x="380" y="1061" class="note">location · carries · penalties</text>
+  </g>
+</svg>

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" role="img" aria-labelledby="t d">
+  <title id="t">Where Leicester ranked, and where a normal champion ranks</title>
+  <desc id="d">League ranks within each season. Leicester City 2015/16: 1st on points, 6th on season on-ball value, 18th on touches, 1st on value per touch. Manchester City 2017/18: 1st on points, 1st on value, 1st on touches, 3rd on value per touch. Ranks only; the two seasons use different data providers, so raw values are not compared.</desc>
+  <defs>
+    <style>
+      .head { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 2px; fill: #6b6b6b; }
+      .col { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: #6b6b6b; }
+      .team { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 600; fill: #1a1a1a; }
+      .note { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: #6b6b6b; }
+      .rk { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 30px; font-weight: 500; fill: #1a1a1a; }
+      .cell { fill: #ffffff; stroke: #c9c9c9; stroke-width: 2; }
+      .hot { fill: #fdf4f9; stroke: #dd0077; stroke-width: 2; }
+    </style>
+  </defs>
+  <rect width="760" height="360" fill="#fafafa"/>
+  <text x="40" y="44" class="head">LEAGUE RANK, WITHIN EACH SEASON</text>
+
+  <g text-anchor="middle">
+    <text x="320" y="86" class="col">points</text>
+    <text x="440" y="86" class="col">on-ball value</text>
+    <text x="560" y="86" class="col">touches</text>
+    <text x="680" y="86" class="col">value / touch</text>
+  </g>
+
+  <!-- Leicester -->
+  <text x="40" y="146" class="team">Leicester City</text>
+  <text x="40" y="166" class="note">2015/16 · champions</text>
+  <g text-anchor="middle">
+    <rect x="270" y="106" width="100" height="74" rx="6" class="cell"/>
+    <text x="320" y="154" class="rk">1st</text>
+    <rect x="390" y="106" width="100" height="74" rx="6" class="hot"/>
+    <text x="440" y="154" class="rk" style="fill:#dd0077">6th</text>
+    <rect x="510" y="106" width="100" height="74" rx="6" class="hot"/>
+    <text x="560" y="154" class="rk" style="fill:#dd0077">18th</text>
+    <rect x="630" y="106" width="100" height="74" rx="6" class="cell"/>
+    <text x="680" y="154" class="rk">1st</text>
+  </g>
+
+  <!-- Man City -->
+  <text x="40" y="246" class="team">Manchester City</text>
+  <text x="40" y="266" class="note">2017/18 · champions</text>
+  <g text-anchor="middle">
+    <rect x="270" y="206" width="100" height="74" rx="6" class="cell"/>
+    <text x="320" y="254" class="rk">1st</text>
+    <rect x="390" y="206" width="100" height="74" rx="6" class="cell"/>
+    <text x="440" y="254" class="rk">1st</text>
+    <rect x="510" y="206" width="100" height="74" rx="6" class="cell"/>
+    <text x="560" y="254" class="rk">1st</text>
+    <rect x="630" y="206" width="100" height="74" rx="6" class="cell"/>
+    <text x="680" y="254" class="rk">3rd</text>
+  </g>
+
+  <text x="40" y="326" class="note">Ranks only. 2015/16 is StatsBomb data, 2017/18 is Wyscout: raw values are never compared.</text>
+</svg>

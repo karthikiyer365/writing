@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" role="img" aria-labelledby="t d">
+  <title id="t">Layout of the player dashboard</title>
+  <desc id="d">A hero strip with career numbers and a row of season chips sit on top of two tabs. The Technical tab holds the shot map with xG band filters and the 12-axis percentile pizza. The Value tab holds the price-vs-output verdict, the value scatter, three career charts and the season log.</desc>
+  <defs>
+    <style>
+      .layer { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 2px; fill: #dd0077; }
+      .box { fill: #ffffff; stroke: #c9c9c9; stroke-width: 2; }
+      .hot { fill: #fdf4f9; stroke: #dd0077; stroke-width: 2; }
+      .label { font-family: Geist, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #1a1a1a; }
+      .note { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: #6b6b6b; }
+    </style>
+  </defs>
+  <rect width="760" height="560" fill="#ffffff"/>
+
+  <text class="layer" x="20" y="28">ALWAYS ON TOP</text>
+  <rect class="box" x="20" y="40" width="720" height="62" rx="8"/>
+  <text class="label" x="40" y="66">Hero strip</text>
+  <text class="note" x="40" y="88">minutes · G+A · peak value · npG+A/90 · npG − npxG · game line</text>
+
+  <rect class="box" x="20" y="114" width="720" height="40" rx="8"/>
+  <text class="label" x="40" y="139">Season chips</text>
+  <text class="note" x="170" y="139">Career · Best year · 2024 · 2025 …  every block re-scopes</text>
+
+  <text class="layer" x="20" y="190">TECHNICAL · HOW HE PLAYS</text>
+  <rect class="box" x="20" y="202" width="350" height="118" rx="8"/>
+  <text class="label" x="40" y="230">Shot map</text>
+  <text class="note" x="40" y="254">dot size = xG · amber = goal</text>
+  <text class="note" x="40" y="274">xG band filter chips</text>
+  <text class="note" x="40" y="294">&lt; 20 shots = anecdote</text>
+
+  <rect class="box" x="20" y="334" width="350" height="140" rx="8"/>
+  <text class="label" x="40" y="362">Technical profile (pizza)</text>
+  <text class="note" x="40" y="386">12 axes · attack · playmaking · defense</text>
+  <text class="note" x="40" y="406">percentile vs same position + league</text>
+  <text class="note" x="40" y="426">peer-median backdrop</text>
+  <text class="note" x="40" y="446">compare up to 3 players</text>
+
+  <text class="layer" x="390" y="190">VALUE · WHAT HE'S WORTH</text>
+  <rect class="hot" x="390" y="202" width="350" height="118" rx="8"/>
+  <text class="label" x="410" y="230">Price vs output verdict</text>
+  <text class="note" x="410" y="254">gap = output pct − value pct</text>
+  <text class="note" x="410" y="274">&gt; +15 BARGAIN · &lt; −15 PREMIUM</text>
+  <text class="note" x="410" y="294">metric set by position</text>
+
+  <rect class="box" x="390" y="334" width="350" height="62" rx="8"/>
+  <text class="label" x="410" y="360">Value scatter</text>
+  <text class="note" x="410" y="382">log € vs output · median quadrants</text>
+
+  <rect class="box" x="390" y="410" width="350" height="64" rx="8"/>
+  <text class="label" x="410" y="436">Career charts</text>
+  <text class="note" x="410" y="458">minutes · npG vs npxG · value vs age</text>
+
+  <rect class="box" x="390" y="488" width="350" height="62" rx="8"/>
+  <text class="label" x="410" y="514">Season log</text>
+  <text class="note" x="410" y="536">raw table · no rates &lt; 450 min</text>
+</svg>

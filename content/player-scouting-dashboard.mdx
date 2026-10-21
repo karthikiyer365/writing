@@ -1,0 +1,223 @@
+---
+title: One page per player. What each part of my scouting dashboard tells you.
+standfirst: I built a player dashboard to answer one scouting question, is he producing for what he costs? Here is every component, why it's drawn the way it is, and where it stops being trustworthy.
+date: 2026-10-21
+category: sports-analytics
+readTime: 12
+featured: true
+hero: /posts/player-scouting-dashboard/hero.svg
+project: https://sports.karthikiyer.info/player?tm=429915&tab=technical&vs=240306
+seoTitle: How I built a football player scouting dashboard
+seoDescription: A walkthrough of a player scouting dashboard, from shot map and percentile pizza to a price-vs-output verdict, read through Maxim De Cuyper and Bruno Fernandes.
+ogImage: /posts/player-scouting-dashboard/og.png
+heroAlt: Layout of the player dashboard. A hero strip and season chips sit on top of two tabs. Technical holds the shot map and the percentile pizza. Value holds the price-vs-output verdict, the value scatter, career charts and the season log.
+---
+
+<StatStrip stats={[
+  { value: "2", label: "tabs: how he plays, what he's worth" },
+  { value: "12", label: "percentile axes vs positional peers" },
+  { value: "±15", label: "band between Bargain and Premium" },
+  { value: "0", label: "chart libraries, every chart is hand-drawn SVG" }
+]} />
+
+<Callout kind="note" label="Live dashboard">
+Every screenshot here comes from the live Player Dashboard. Open the same view and hover anything: [De Cuyper vs Bruno Fernandes on the dashboard →](https://sports.karthikiyer.info/player?tm=429915&tab=technical&vs=240306)
+</Callout>
+
+A scout looking at a player usually has one question behind all the others. **Is he producing for what he costs?**
+
+I built a dashboard that tries to answer that on one page. You search a name, and you get a card for that player across every season in the big five leagues since 2008. It's built from FBref, Understat and Transfermarkt data, joined into one database.
+
+This post walks through every part of that page. What each component shows, why I drew it that way, and what it can't tell you. I'll use two players the whole way through:
+
+- **Maxim De Cuyper**, a 26-year-old Belgian wing-back who joined Brighton in 2025.
+- **Bruno Fernandes**, Manchester United's 32-year-old captain and creator.
+
+They make a useful pair. One is cheap and new to the league, the other is established and expensive. And the dashboard's verdicts on them say as much about the dashboard as about the players.
+
+## How is the page laid out?
+
+The diagram at the top is the whole page. It has two layers.
+
+The top layer never changes: a **hero strip** with career numbers, and a row of **season chips**. Below it sit two tabs. **Technical** shows how the player plays. **Value** shows what he's worth against what he produces.
+
+<mark>I split it into two tabs because they answer two different questions.</mark> A scout watching style wants shots and passing. A recruitment lead pricing a deal wants value against output. Putting both on one long scroll made each harder to find.
+
+The whole page is one HTML file with plain JavaScript and no chart library. Every chart is drawn as SVG by hand. That cost me more time up front, but it meant every axis, label and caption says exactly what I want it to, and nothing ships that I didn't decide on.
+
+## What does the hero strip tell you in five seconds?
+
+![Hero strip for Maxim De Cuyper: 1,905 minutes, 4 goals and 5 assists, peak value €22M, npG+A per 90 of 0.42, npG minus npxG of +0.5, 2 seasons, 1 club. Second line: 21 shots, mode distance 20m, 81% left foot, 38% on target, 48% in box.](/posts/player-scouting-dashboard/hero-strip.png)
+*De Cuyper's career strip. The second line is the "game line": how he shoots, not just how much.*
+
+The first row is the career at a glance: minutes, goals and assists, peak market value, non-penalty goals and assists per 90, seasons and clubs.
+
+Two numbers in it are deliberate.
+
+**npG+A /90** removes penalties and divides by minutes. Penalties go to whoever takes them, not whoever plays best, and totals reward players who simply played more. Per 90 puts a starter and a squad player on the same footing.
+
+**npG − npxG** is goals minus the goals his chances were expected to produce. It's coloured green above zero and red below. De Cuyper sits at +0.5, Bruno at −0.9 over a much longer career. <mark>I show it, but I never rank on it.</mark> One season of finishing is mostly luck. It only means something over a long run.
+
+The second row is the game line. Modal shot distance, foot split, shots on target, share of shots inside the box. De Cuyper's tells you a lot quickly: 81% left foot, 0% headers, a typical shot from 20 metres. That's a left wing-back who shoots from the edge of the area, before you've opened a single chart.
+
+## Why do the season chips matter so much?
+
+Under the strip is a row of chips: **Career**, **Best year**, and one chip per season.
+
+Every block on the page re-scopes to the chip you pick. Pick 2025 and the shot map, the percentiles and the verdict are all for 2025. Pick Career and the Technical tab covers everything since 2014, when shot data starts.
+
+**Best year** is a shortcut. It picks the season with the highest npG+A per 90, but only among seasons with at least ten full 90s. <mark>Without that floor, a striker's best year would be the season he scored twice in 200 minutes.</mark>
+
+The chip also lives in the URL, along with the tab and any compared players. A scout can send a colleague the exact view they're looking at, not just the player.
+
+## How do you read the Technical tab?
+
+![Technical tab for De Cuyper compared with Bruno Fernandes: shot map with xG band filter chips on the left, a 12-axis percentile pizza with both players overlaid on the right, and a table of percentiles below it.](/posts/player-scouting-dashboard/technical.png)
+*Technical tab, career view, with Bruno Fernandes added as a comparison.*
+
+### The shot map
+
+Every shot is a dot on a half pitch. Dot size is xG, the chance quality. Amber means goal.
+
+Above the map are four **xG band chips**: 0.80 and up, 0.50 to 0.79, 0.20 to 0.49, and under 0.20. Each shows its share of shots and its count. Click one to filter the map to just those shots.
+
+<mark>The bands exist because a shot map hides its own distribution.</mark> Twenty small dots look like activity. The chips say what they are. For De Cuyper, 71% of his shots are under 0.20 xG, and only one of his shots here has been worth 0.80 xG or more.
+
+Below 20 shots, the map says it's an anecdote, not a pattern. De Cuyper has 21, so read his with care.
+
+### The technical profile (pizza)
+
+The pizza has 12 axes in three groups:
+
+| Group | Axes | What to keep in mind |
+|---|---|---|
+| Attack | npxG, shots, xG per shot, npGoals (per 90) | Shot volume depends on the team |
+| Playmaking | xA, key passes, xGChain, xGBuildup (per 90) | xGBuildup credits everyone in a move equally |
+| Defense & discipline | tackles won, interceptions, fouls, cards (per 90) | Volume, not quality |
+
+Each axis is a **percentile against players in the same position and league**, with at least ten full 90s. A wedge at 90 means he beats 90% of his positional peers on that stat.
+
+A few decisions sit under that:
+
+- **Same position only.** A centre-back's shots per 90 against strikers' shots per 90 tells you nothing.
+- **Fouls and cards are flipped.** Fewer is better, so a full wedge always means "good" and the shape reads one way.
+- **Rates come from summed totals.** A career view adds up all shots and all minutes, then divides. Averaging season rates would let a 400-minute season count as much as a 3,000-minute one.
+- **A grey peer-median shape sits behind the player.** It shows what "normal" looks like without a second chart.
+
+### Comparing two players
+
+Add up to three players and they overlay on one pizza. <mark>Comparisons always switch to Career and rank everyone against the same peer pool.</mark> If each player was ranked against their own pool, the same wedge length would mean different things.
+
+Here, both are ranked among Premier League midfielders:
+
+| Axis | De Cuyper | Bruno |
+|---|---|---|
+| xG per shot | **97** | 47 |
+| xA per 90 | 96 | **98** |
+| Key passes per 90 | 92 | **99** |
+| Shots per 90 | 33 | **95** |
+| Tackles won per 90 | 22 | **45** |
+
+The shapes are close on creating chances. De Cuyper is near Bruno's level on expected assists. They split on shooting. Bruno shoots from everywhere, at high volume and lower quality. De Cuyper shoots rarely, and when he does the chance is good.
+
+That's a real scouting read, and it came from one overlay.
+
+## How does the verdict card decide Bargain or Premium?
+
+The Value tab opens with the card the whole page was built around.
+
+It ranks the player's **output** against his positional peers for one season. Then it ranks his **market value** against the same peers. The verdict is the gap between the two percentiles:
+
+> **gap = output percentile − value percentile**
+
+- More than +15: **BARGAIN**. He produces more than his price suggests.
+- Less than −15: **PREMIUM**. He costs more than he produces.
+- In between: **FAIR VALUE**.
+
+<mark>I compared percentiles, not euros, so price and production sit on the same 0–100 scale.</mark> A €40M midfielder and a 0.76 goals-and-assists rate can't be subtracted. Their ranks can.
+
+The output metric changes by position, because "output" means different things:
+
+| Position | Output metric |
+|---|---|
+| Forward, midfielder | npG+A per 90 |
+| Defender | tackles + interceptions per 90 |
+| Goalkeeper | save % |
+
+Under the verdict sit the bars that defend it: expected output (npxG+xA), availability, start share, cards as literal booking-card dots, and value. The page also refuses to give a verdict when it shouldn't. Under 450 minutes it says **TOO FEW MINUTES**. With no market value or too small a peer pool, it says so instead of guessing.
+
+### Bruno: a Bargain at 32
+
+![Bruno Fernandes 2025 Value tab: BARGAIN verdict, output 99 vs value 76, gap +23. Bars for npG+A per 90, npxG+xA per 90, availability, start share, cards and value. Scatter shows him top-right among Premier League midfielders.](/posts/player-scouting-dashboard/bruno-verdict.png)
+*Bruno, 2025/26, ranked against 182 Premier League midfielders.*
+
+Bruno's 2025/26 output ranks 99th among Premier League midfielders. His €40M value ranks 76th. Gap +23: **BARGAIN**.
+
+The bars back it up. His expected output is also 99th, so this isn't a hot finishing streak. He played 90% of the minutes available and started every game he appeared in.
+
+### De Cuyper: a Premium, and why that's a warning
+
+![Maxim De Cuyper 2025 Value tab: PREMIUM verdict, output 13 vs value 50, gap -37. Tackles plus interceptions per 90 at the 13th percentile, but npxG+xA per 90 at the 100th percentile.](/posts/player-scouting-dashboard/dc-verdict.png)
+*De Cuyper, 2025/26, ranked against 139 Premier League defenders.*
+
+De Cuyper is listed as a defender for 2025/26. So the card judges him on tackles and interceptions, and there he ranks 13th. His €22M value ranks 50th. Gap −37: **PREMIUM**.
+
+Now look one bar down. His expected goals and assists per 90 rank **100th among Premier League defenders**. No defender in the league created more.
+
+<mark>The verdict is only as good as the metric the position hands it.</mark> For a wing-back who attacks, tackles and interceptions is the wrong question. The card prints that limit right under the bars: *"Tkl+Int/90 measures defensive volume, not quality."* That's why the expected-output bar sits under every verdict. When the two disagree this much, the scout should look again before trusting the label.
+
+## What does the value scatter add?
+
+Next to the verdict is a scatter of the whole peer pool. Market value runs along the bottom, the output rate up the side. The player is the amber dot.
+
+Two dashed lines mark the peer medians and split the chart into four corners. Top-left is **cheap and productive**. Bottom-right is **expensive and quiet**. <mark>Quadrants need no regression line to read.</mark> Anyone can see which corner a dot is in.
+
+The value axis is a log scale. Market value is very skewed, with a few players worth ten times the median. On a normal axis, the cheap half of the league would be squashed into a strip by the left edge, and that's where scouts most want to look.
+
+## What do the career charts show?
+
+![Bruno Fernandes career charts: minutes by season against a full season, non-penalty goals as bars against npxG as a line, and market value against the typical value for a midfielder of his age, with transfer markers.](/posts/player-scouting-dashboard/bruno-career.png)
+*Bruno's career. Note the gap between 2016 and 2019: his Sporting years are outside the big five.*
+
+Below the season view, three charts cover the whole career, whatever the chips say.
+
+**Minutes by season** plots minutes against a full league season. Dips are injury, rotation or a mid-season move. Bruno has been close to every minute since 2020.
+
+**npGoals vs npxG** shows goals as bars and the expected goals of his chances as a line. Above the line means finishing better than expected. The caption says *read the run, not one bar*, because one season of finishing is mostly variance.
+
+**Market value vs typical for age** puts the player's value next to the average value of players in the same position at each age, on the same euro axis. <mark>I kept both lines in real euros so the gap between them is the real gap.</mark> Vertical dashed lines mark transfers. Dotted lines mark club changes the transfer data missed, so a move never disappears just because the record does.
+
+Bruno's chart tells the story of a peak. His value rose to €90M in 2020 and has fallen every year since, to €40M. It's still far above what a typical 32-year-old midfielder is worth. That falling price, with output still at the 99th percentile, is exactly why the verdict reads Bargain.
+
+At the bottom is a **season log**: raw minutes, goals, assists and value for every season. Rates under 450 minutes show as a dash, not a number. Valuations more than a year old at season end get a ⚠.
+
+## What rules does every number follow?
+
+A few rules run through the whole page. They're the reason two numbers on screen can be trusted next to each other.
+
+| Rule | Why |
+|---|---|
+| Percentiles use the midrank for ties | If a whole pool is tied, everyone reads 50, not 0 |
+| A pool under 8 players ranks nothing | A percentile out of five players is noise |
+| No rates under 450 minutes | Small samples swing too much to rank |
+| Career rates use summed totals | Long seasons count more than short ones |
+| Comparisons share one peer pool | The same wedge length means the same thing |
+| Each position's metric states its limit | The reader sees the caveat next to the number |
+
+## What can't it see?
+
+The dashboard is honest about three blind spots, and you should know them before using it.
+
+- **Defending is counted, not judged.** Tackles and interceptions count events. A defender on a dominant team simply defends less, and the best defending, being in the right place so nothing happens, leaves no event at all.
+- **Save % ignores shot difficulty.** A keeper facing easy shots looks better than one facing hard ones. A difficulty-adjusted measure is the next step.
+- **Coverage is the big five only.** De Cuyper's Club Brugge years and Bruno's Sporting years aren't here. Anyone joining from outside those leagues arrives with a short history.
+
+## The short version
+
+The dashboard answers one question: **is this player producing for what he costs?**
+
+The Technical tab shows how he plays, ranked against his positional peers. The Value tab turns output and price into percentiles and gives a verdict on the gap. Every chart has a caption that says what it can't show.
+
+Bruno Fernandes comes out a Bargain. De Cuyper comes out a Premium, while creating more than any defender in the league. That second result is the most useful thing on the page. It shows exactly where the card's logic ends and the scout's judgement has to start.
+
+[Open the dashboard and try your own player →](https://sports.karthikiyer.info/player)

@@ -5,12 +5,12 @@ date: 2026-10-21
 category: sports-analytics
 readTime: 13
 featured: true
-hero: /posts/player-scouting-dashboard/hero.svg
+hero: /posts/player-scouting-dashboard/hero.png
 project: https://sports.karthikiyer.info/player?tm=429915&tab=technical&vs=240306
 seoTitle: How I built a football scouting dashboard on open data
 seoDescription: "A football scouting dashboard built on free, open data: shot map, percentile pizza and a price-vs-output verdict, read through De Cuyper and Bruno Fernandes."
 ogImage: /posts/player-scouting-dashboard/og.png
-heroAlt: Layout of the player dashboard. A hero strip and season chips sit on top of two tabs. Technical holds the shot map and the percentile pizza. Value holds the price-vs-output verdict, the value scatter, career charts and the season log.
+heroAlt: Shot map of every Lionel Messi shot since 2014, 1,462 shots and 253 goals. Dot size is the chance's xG and amber dots are goals, packed inside the penalty box.
 ---
 
 <StatStrip stats={[
@@ -37,7 +37,10 @@ They make a useful pair. One is cheap and new to the league, the other is establ
 
 ## How is the page laid out?
 
-The diagram at the top is the whole page. It has two layers.
+![Layout diagram of the player dashboard: hero strip and season chips on top, then a Technical tab with shot map and percentile pizza, and a Value tab with verdict card, value scatter, career charts and season log.](/posts/player-scouting-dashboard/layout.svg)
+*The whole page on one diagram.*
+
+The page has two layers.
 
 The top layer never changes: a **hero strip** with career numbers, and a row of **season chips**. Below it sit two tabs. **Technical** shows how the player plays. **Value** shows what he's worth against what he produces.
 

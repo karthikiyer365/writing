@@ -3,12 +3,12 @@ title: One page per player. What each part of my scouting dashboard tells you.
 standfirst: I built a player dashboard to answer one scouting question, is he producing for what he costs? Here is every component, why it's drawn the way it is, and where it stops being trustworthy.
 date: 2026-10-21
 category: sports-analytics
-readTime: 12
+readTime: 13
 featured: true
 hero: /posts/player-scouting-dashboard/hero.svg
 project: https://sports.karthikiyer.info/player?tm=429915&tab=technical&vs=240306
-seoTitle: How I built a football player scouting dashboard
-seoDescription: A walkthrough of a player scouting dashboard, from shot map and percentile pizza to a price-vs-output verdict, read through Maxim De Cuyper and Bruno Fernandes.
+seoTitle: How I built a football scouting dashboard on open data
+seoDescription: "A football scouting dashboard built on free, open data: shot map, percentile pizza and a price-vs-output verdict, read through De Cuyper and Bruno Fernandes."
 ogImage: /posts/player-scouting-dashboard/og.png
 heroAlt: Layout of the player dashboard. A hero strip and season chips sit on top of two tabs. Technical holds the shot map and the percentile pizza. Value holds the price-vs-output verdict, the value scatter, career charts and the season log.
 ---
@@ -26,7 +26,7 @@ Every screenshot here comes from the live Player Dashboard. Open the same view a
 
 A scout looking at a player usually has one question behind all the others. **Is he producing for what he costs?**
 
-I built a dashboard that tries to answer that on one page. You search a name, and you get a card for that player across every season in the big five leagues since 2008. It's built from FBref, Understat and Transfermarkt data, joined into one database.
+I built a dashboard that tries to answer that on one page. You search a name, and you get a card for that player across every season in the big five leagues since 2008. It runs entirely on free, open football data from FBref, Understat and Transfermarkt, [joined into one database](/football-data-was-split/). The code is public on [GitHub](https://github.com/karthikiyer365/SportSignal).
 
 This post walks through every part of that page. What each component shows, why I drew it that way, and what it can't tell you. I'll use two players the whole way through:
 
@@ -221,3 +221,41 @@ The Technical tab shows how he plays, ranked against his positional peers. The V
 Bruno Fernandes comes out a Bargain. De Cuyper comes out a Premium, while creating more than any defender in the league. That second result is the most useful thing on the page. It shows exactly where the card's logic ends and the scout's judgement has to start.
 
 [Open the dashboard and try your own player →](https://sports.karthikiyer.info/player)
+
+## Frequently asked questions
+
+### Is the dashboard built on open data, and is the code public?
+
+Yes to both. Every number comes from free, open football data: season stats from FBref, xG and shots from Understat, and market values and transfers from a public Transfermarkt dataset. No paid provider is involved. The code for the dashboard and the data pipeline is public on [GitHub](https://github.com/karthikiyer365/SportSignal).
+
+### Can I use this dashboard to find players, or only to check one?
+
+Only to check one. It evaluates a player you already have in mind: search a name, read the card. It doesn't filter the league for "cheap and productive under 24". The value scatter shows the whole peer pool, so you can hover across it, but there are no search filters yet.
+
+### Which leagues and seasons does it cover?
+
+The big five: Premier League, La Liga, Serie A, Bundesliga and Ligue 1. Season stats and market values start in 2008/09. Shot-level data (xG, shot maps, the pizza) starts in 2014/15. Players arriving from other leagues, like De Cuyper from Belgium, show only their big-five seasons.
+
+### Can I compare players from different leagues?
+
+You can overlay them, but read it with care. A comparison ranks every player against the first player's league and position pool. Rates from another league are not adjusted for league strength, so a Serie A season and a Premier League season are treated as equal.
+
+### Why did a wing-back come out as Premium?
+
+The verdict uses one output metric per position, and De Cuyper was listed as a defender. Defenders are judged on tackles plus interceptions, where he ranks 13th. His expected goals and assists rank 100th among defenders. When the verdict and the expected-output bar disagree this much, trust the bars and look at his role.
+
+### How is the Bargain or Premium verdict calculated?
+
+It ranks the player's output and his market value against the same peers for one season, then subtracts: output percentile minus value percentile. Above +15 is Bargain, below −15 is Premium, in between is Fair value. The ±15 band is a fixed threshold, so a gap near it is a close call.
+
+### Where do market values come from, and how fresh are they?
+
+Transfermarkt, through a public dataset. They are crowd-sourced estimates, not transfer fees. The season log marks any valuation more than a year old at season end with a ⚠, because an old value makes the verdict less reliable.
+
+### Does it include wages, contracts or injuries?
+
+No. None of those are in the data. Availability (share of possible minutes) and start share are the closest proxies for fitness and trust from the coach, and the minutes chart shows the dips. Why a player missed time has to come from somewhere else.
+
+### How much data does a player need before I can trust the numbers?
+
+Rates and verdicts need at least 450 minutes in a season. Pizza peers need ten full 90s. Any percentile needs a pool of at least eight players. A shot map with fewer than 20 shots is flagged as an anecdote. Below those floors, the page shows a dash or a message instead of a number.
